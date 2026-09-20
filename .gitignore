@@ -36,9 +36,7 @@ target/
 test-ledger/
 .crates/
 **/*.rs.bk
-Cargo.lock
-# Descomentar si el workspace Rust debe versionar Cargo.lock:
-# !Cargo.lock
+# Cargo.lock del workspace se versiona para builds reproducibles del programa.
 
 # Keypairs de deploy y wallets locales
 target/deploy/*-keypair.json

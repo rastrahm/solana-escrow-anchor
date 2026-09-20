@@ -2,24 +2,45 @@
 
 Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests primero, implementación después.
 
+## Progreso
+
+| Fase | Descripción | Estado |
+|------|-------------|--------|
+| 0 | Setup del monorepo | ✅ Completada |
+| 1 | Modelo de estado on-chain | ⬜ Pendiente |
+| 2 | MakeOffer (TDD) | ⬜ Pendiente |
+| 3 | TakeOffer (swap atómico) | ⬜ Pendiente |
+| 4 | Refund | ⬜ Pendiente |
+| 5 | Hardening on-chain | ⬜ Pendiente |
+| 6 | Frontend: base Next.js | ⬜ Pendiente |
+| 7 | Frontend: features (TDD UI) | ⬜ Pendiente |
+| 8 | Integración y despliegue | ⬜ Pendiente |
+
 ---
 
-## Fase 0 — Setup del monorepo
+## Fase 0 — Setup del monorepo ✅
 
-1. Inicializar git (si aún no existe) y confirmar `.gitignore` en la raíz.
-2. Crear workspace Anchor en la raíz:
-   ```bash
-   anchor init escrow --no-git
-   ```
-   (o reorganizar carpetas `programs/`, `tests/`, `Anchor.toml`, `Cargo.toml`).
-3. Crear app frontend Next.js en `app/` o `frontend/`:
-   ```bash
-   npx create-next-app@latest frontend --typescript --app --eslint --tailwind --src-dir
-   ```
-4. Alinear versiones: Anchor ≥ 0.30, Solana CLI, Node LTS.
-5. Verificar `declare_id!` y keypair de despliegue (`target/deploy/*.json` en `.gitignore`).
+> **Estado: completada** (rama `bootstrap`).
 
-**Criterio de salida:** `anchor build` y `frontend` arrancan sin errores.
+- [x] Inicializar git (si aún no existe) y confirmar `.gitignore` en la raíz.
+- [x] Crear workspace Anchor en la raíz (`programs/`, `tests/`, `Anchor.toml`, `Cargo.toml`).
+- [x] Crear app frontend Next.js en `frontend/` (App Router + Tailwind + `src/`).
+- [x] Alinear versiones:
+  - **Node ≥ 20.18** (usar `nvm use` + `.nvmrc` → 22.22.2)
+  - **Anchor 0.31.1** / Solana CLI 2.2.x
+  - **platform-tools v1.52** para compilar (ver abajo)
+- [x] Verificar `declare_id!` == pubkey del keypair en `target/deploy/` (ignorado por git).
+- [x] Criterio de salida: `npm run build:program` y `npm run build:frontend` sin errores.
+
+### Compilación del programa
+
+Solana 2.2.x trae platform-tools **v1.48** (cargo 1.84), incompatible con crates `edition2024`. Usar el script del repo:
+
+```bash
+npm run build:program    # cargo-build-sbf --tools-version v1.52 + IDL
+npm run build:frontend   # next build
+npm run dev:frontend     # next dev
+```
 
 ---
 
