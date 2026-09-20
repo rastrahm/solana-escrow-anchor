@@ -12,104 +12,117 @@ Sí existen bibliotecas de ataques para Solana (el análogo de lo que en Ethereu
 | **Neodyme / auditorías públicas** | Writeups de bugs reales en mainnet (referencia de severidad) | Buscar “Neodyme Solana security” |
 | **Ackee Blockchain / OtterSec / Trail of Bits** | Guías y reportes de auditoría Solana/Anchor | Publicaciones de cada firma |
 
-> En Ethereum el “catálogo” se popularizó como SWC + herramientas (Slither, Mythril). En Solana el catálogo de referencia práctica es **Sealevel Attacks** + el curso de Program Security de la Foundation. No hay (aún) un estándar único tipo SWC con IDs universales igual de adoptado, pero el contenido sí existe.
+> En Ethereum el “catálogo” se popularizó como SWC + herramientas (Slither, Mythril). En Solana el catálogo de referencia práctica es **Sealevel Attacks** + el curso de Program Security de la Foundation.
 
-Menciones locales previas (sin checklist formal):
+Menciones locales:
 
-- [`solana.cursorrules`](../solana.cursorrules) — Account Substitution, Missing Ownership Check, ownership, signers, PDAs
-- [`.cursorrules`](../.cursorrules) — mitigaciones del escrow (PDA, `transfer_checked`, close vault/state)
-- Tests en [`tests/escrow.ts`](../tests/escrow.ts) — mint falso, amount=0
+- [`solana.cursorrules`](../solana.cursorrules) — Account Substitution, Missing Ownership Check
+- [`.cursorrules`](../.cursorrules) — PDA, `transfer_checked`, close vault/state
+- Tests: [`tests/escrow.ts`](../tests/escrow.ts)
+- Script estático: `npm run harden:check`
 
 ---
 
 ## Matriz: ataque → riesgo en este escrow → estado
 
-Leyenda: ✅ mitigado · 🟡 parcial / pendiente de test · ⬜ no aplica aún · ❌ abierto
+Leyenda: ✅ mitigado · 🟡 aceptado/documentado · ⬜ N/A · ❌ abierto
 
-| # | Ataque (Sealevel / práctica) | Cómo se manifiesta | Mitigación en este programa | Estado | Evidencia |
-|---|------------------------------|--------------------|-----------------------------|--------|-----------|
-| 1 | **Account substitution** | Pasar otra cuenta válida del mismo tipo (p. ej. mint falso) | `has_one = mint_a/mint_b/maker`, seeds PDA, `associated_token::*` | ✅ | Test TakeOffer mint falso |
-| 2 | **Missing ownership check** | Usar cuenta no owned por el programa esperado | `Account<>` / `InterfaceAccount<>` validan owner + discriminator | ✅ | Tipos Anchor en Make/Take |
-| 3 | **Missing signer check** | Ejecutar sin la firma correcta | `Signer` en maker/taker/refund | ✅ | Take + Refund (maker signer) |
-| 4 | **PDA sharing / seeds débiles** | Misma PDA para contextos distintos → drenaje | Seeds `[b"escrow", maker, seed]` por oferta | ✅ | `ESCROW_SEED` + bump guardado |
-| 5 | **Arbitrary CPI / wrong program** | CPI a programa token incorrecto | `Interface<'info, TokenInterface>` + `transfer_checked` | ✅ | Make/Take/Refund |
-| 6 | **Token amount / decimals mismatch** | `transfer` sin decimals → spoofing | Solo `transfer_checked` | ✅ | Regla `.cursorrules` |
-| 7 | **Closing account / orphan lamports** | Vault o state quedan abiertos con rent | `close_account` vault + `close = maker` en state | ✅ | Take + Refund |
-| 8 | **Re-initialization (`init_if_needed`)** | Reabrir cuenta cerrada con datos maliciosos | No usamos `init_if_needed`; solo `init` | ✅ | MakeOffer |
-| 9 | **Type cosplay** | Cuenta con layout parecido / discriminator engañoso | Discriminator Anchor + owner check | ✅ | `Account<EscrowState>` |
-| 10 | **Integer overflow** | Montos wrap-around | `u64` + `require!(amount/receive > 0)`; perfil `overflow-checks` | 🟡 | Checks básicos; ampliar tests Fase 5 |
-| 11 | **Unauthorized refund** | No-maker cancela y roba Token A | `maker: Signer` + `has_one` + seeds PDA | ✅ | Test Refund no-maker |
-| 12 | **Account data matching** | Authority del vault ≠ PDA escrow | Vault ATA `authority = escrow` | ✅ | MakeOffer + Take constraints |
-| 13 | **Sysvar / clock spoofing** | No usamos clock/sysvar custom | N/A | ⬜ | — |
-| 14 | **Front-running / tx ordering** | Taker compite por la misma oferta | Riesgo de mercado (una PDA por seed); no es bug de ownership | 🟡 | Documentar UX; seeds únicos |
-| 15 | **Writable/account duplication** | Misma cuenta dos veces en roles conflictivos | Constraints ATA distintas (maker/taker/vault) | 🟡 | Revisar en hardening |
+| # | Ataque (Sealevel / práctica) | Mitigación | Estado | Evidencia |
+|---|------------------------------|------------|--------|-----------|
+| 1 | **Account substitution** | `has_one` mints/maker, seeds, ATA | ✅ | TakeOffer mint falso |
+| 2 | **Missing ownership check** | `Account` / `InterfaceAccount` | ✅ | Tipos Anchor |
+| 3 | **Missing signer check** | `Signer` maker/taker/refund | ✅ | Refund no-maker |
+| 4 | **PDA sharing / seeds débiles** | `[b"escrow", maker, seed]` | ✅ | `ESCROW_SEED` |
+| 5 | **Arbitrary CPI / wrong program** | `TokenInterface` + `transfer_checked` | ✅ | Make/Take/Refund + `harden:check` |
+| 6 | **Token decimals mismatch** | Solo `transfer_checked` | ✅ | `harden:check` |
+| 7 | **Orphan lamports** | close vault + `close = maker` | ✅ | Take + Refund |
+| 8 | **Re-initialization** | Sin `init_if_needed` | ✅ | `harden:check` |
+| 9 | **Type cosplay** | Discriminator + owner | ✅ | `Account<EscrowState>` |
+| 10 | **Integer overflow** | `overflow-checks = true` + `amount/receive > 0` | ✅ | Cargo.toml + tests amount/receive=0 |
+| 11 | **Unauthorized refund** | maker signer + has_one + seeds | ✅ | Test Refund no-maker |
+| 12 | **Account data matching** | vault authority = escrow PDA (`[b"vault", escrow]`) | ✅ | Make/Take/Refund |
+| 13 | **Sysvar / clock spoofing** | No usamos clock | ⬜ | N/A |
+| 14 | **Front-running** | Riesgo de mercado (1 PDA/seed); no es bug de ownership | 🟡 | Documentado: usar seeds únicos en UX |
+| 15 | **Account duplication** | ATA con authorities distintas (maker/taker/vault) | ✅ | Constraints ATA; roles no solapables |
 
 ---
 
-## Checklist pre-despliegue (usar antes de devnet/mainnet)
+## Checklist pre-despliegue
 
 ### Validación de cuentas
-- [x] Toda cuenta en `#[derive(Accounts)]` con constraints explícitas (`seeds`, `bump`, `has_one`, ATA)
-- [x] Sin `UncheckedAccount` sin `constraint` documentada (maker en Take es `SystemAccount` + `has_one`)
-- [x] Sin `.unwrap()` / `.expect()` en lógica on-chain
-- [x] Revisar Refund con las mismas reglas (Fase 4)
+- [x] Constraints explícitas (`seeds`, `bump`, `has_one`, ATA)
+- [x] Sin `UncheckedAccount` sin constraint
+- [x] Sin `.unwrap()` / `.expect()` en producción (`harden:check`)
+- [x] Refund con las mismas reglas
 
 ### Tokens
 - [x] Solo `transfer_checked`
-- [x] `TokenInterface` (SPL + Token-2022)
-- [x] Vault authority = PDA escrow
-- [x] Cierre de vault en TakeOffer
-- [x] Cierre de vault en Refund
+- [x] `TokenInterface`
+- [x] Vault authority = PDA
+- [x] Cierre vault en Take + Refund
 
-### PDAs
-- [x] Seeds documentadas y estables
-- [x] Bump persistido en estado y reutilizado (`bump = escrow.bump`)
-- [x] No compartir PDA entre makers/ofertas
+### PDAs / layout
+- [x] Seeds documentadas
+- [x] Bump persistido
+- [x] Layout Borsh packed 121 bytes (`Pubkey`→`u64`→`u8`), little-endian
+- [x] Espacio < 128 bytes
 
-### Tests de ataque obligatorios
+### Tests de ataque
 - [x] MakeOffer amount = 0
+- [x] MakeOffer receive = 0
+- [x] MakeOffer mint_a == mint_b
 - [x] TakeOffer mint A falso
 - [x] Refund por no-maker
-- [ ] Overflow / receive = 0 en Take (si aplica)
-- [x] Espacio de cuenta = 121 bytes en init
+- [x] Layout on-chain byte offsets
+- [x] Compute units MakeOffer < 100k (simulación)
 
 ### Build / deploy
-- [x] `declare_id!` = keypair de deploy
-- [ ] `npm run build:program` limpio en CI
-- [ ] Deploy verifiable (opcional Anchor `--verifiable`)
-- [ ] IDL tipado sincronizado con frontend
+- [x] `declare_id!` = keypair
+- [x] `npm run harden:check` + `npm run test:harden`
+- [ ] Deploy verifiable (opcional)
+- [ ] IDL sincronizado con frontend (Fase 6+)
 
 ---
 
-## Cómo usar Sealevel Attacks al auditar este repo
-
-1. Clonar o abrir https://github.com/coral-xyz/sealevel-attacks  
-2. Para cada carpeta de ataque, leer `insecure` vs `recommended`.  
-3. Buscar el mismo patrón en `programs/escrow/src/instructions/*.rs`.  
-4. Marcar la fila de la matriz arriba como ✅ / 🟡 / ❌.  
-5. Si falta cobertura: añadir test en `tests/escrow.ts` **antes** del fix (TDD).
-
-Comandos locales:
+## Comandos
 
 ```bash
-npm run test:program    # suite actual (incl. mint falso)
-npm run test:layout     # layout EscrowState
+npm run harden:check    # estático: transfer_checked, no unwrap, overflow-checks
+npm run test:layout     # Rust: INIT_SPACE + Borsh LE packed
+npm run test:program    # build + suite TS
+npm run test:harden     # los tres anteriores
 ```
 
 ---
 
-## Mapa rápido instrucción ↔ controles
+## Persistencia de bytes (Solana SBF ≠ EVM)
 
-| Instrucción | Controles clave |
-|-------------|-----------------|
-| `make_offer` | `init` PDA + vault ATA, `transfer_checked`, amount/receive > 0, mints distintos |
-| `take_offer` | `has_one` maker/mints, PDA seeds+bump, CPI signer, close vault+state |
-| `refund` | Solo maker signer + `has_one`, transfer vault→maker, close vault+state |
+| | Solana (este programa) | EVM / Solidity |
+|--|------------------------|----------------|
+| Modelo | Cuenta con blob Borsh | Storage slots 32 bytes |
+| Padding | Packed, sin huecos entre campos | Slot packing / alignment distinto |
+| Enteros | Little-endian | Big-endian en ABI |
+| Orden óptimo aquí | `Pubkey(32)` → `u64(8)` → `u8(1)` | N/A (otro modelo) |
+
+Offsets de `EscrowState` (con discriminator):
+
+| Offset | Campo |
+|-------:|-------|
+| 0 | discriminator (8) |
+| 8 | maker |
+| 40 | mint_a |
+| 72 | mint_b |
+| 104 | receive (u64 LE) |
+| 112 | seed (u64 LE) |
+| 120 | bump |
+| **121** | **total** |
 
 ---
 
-## Próximos pasos (Fase 5)
+## Mapa instrucción ↔ controles
 
-1. Completar filas 🟡 de la matriz (overflow, front-running, account duplication).  
-2. Opcional: script CI que falle si `grep` detecta `transfer(` sin `_checked` o `init_if_needed`.  
-3. Antes de mainnet: checklist completa + revisión externa con Sealevel Attacks.
+| Instrucción | Controles clave |
+|-------------|-----------------|
+| `make_offer` | init PDA+vault, `transfer_checked`, amount/receive > 0, mints distintos |
+| `take_offer` | has_one, PDA signer, close vault+state |
+| `refund` | solo maker, close vault+state |

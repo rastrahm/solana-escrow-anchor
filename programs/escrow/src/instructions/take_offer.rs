@@ -4,11 +4,14 @@ use anchor_spl::token_interface::{
     TransferChecked,
 };
 
-use crate::{constants::ESCROW_SEED, error::EscrowError, state::EscrowState};
+use crate::{
+    constants::{ESCROW_SEED, VAULT_SEED},
+    error::EscrowError,
+    state::EscrowState,
+};
 
 /// @notice Swap atómico: el taker paga Token B al maker y recibe Token A del vault.
 /// @dev Cierra vault (CPI PDA signer) y `EscrowState` (`close = maker`) para recuperar rent.
-/// @param ctx Cuentas: taker, maker, escrow, mints, vault, ATAs A/B, token_program.
 /// @return Result<()> Ok si el swap y el cierre de cuentas fueron exitosos.
 pub fn take_offer(ctx: Context<TakeOffer>) -> Result<()> {
     let seed = ctx.accounts.escrow.seed;
@@ -17,8 +20,8 @@ pub fn take_offer(ctx: Context<TakeOffer>) -> Result<()> {
     let receive = ctx.accounts.escrow.receive;
     let amount_a = ctx.accounts.vault.amount;
 
+    // receive > 0 ya se validó en make_offer; amount_a protege vault vacío anómalo.
     require!(amount_a > 0, EscrowError::InvalidAmount);
-    require!(receive > 0, EscrowError::InvalidAmount);
 
     // 1) Taker → Maker: Token B
     transfer_checked(
@@ -79,7 +82,6 @@ pub struct TakeOffer<'info> {
     pub taker: Signer<'info>,
 
     /// Maker recibe Token B y el rent de vault + EscrowState.
-    /// CHECK: validado por `has_one = maker` / seeds del escrow.
     #[account(mut)]
     pub maker: SystemAccount<'info>,
 
@@ -99,33 +101,35 @@ pub struct TakeOffer<'info> {
 
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = escrow,
-        associated_token::token_program = token_program
+        seeds = [VAULT_SEED, escrow.key().as_ref()],
+        bump,
+        token::mint = mint_a,
+        token::authority = escrow,
+        token::token_program = token_program
     )]
     pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = taker,
-        associated_token::token_program = token_program
+        token::mint = mint_a,
+        token::authority = taker,
+        token::token_program = token_program
     )]
     pub taker_ata_a: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        associated_token::mint = mint_b,
-        associated_token::authority = taker,
-        associated_token::token_program = token_program
+        token::mint = mint_b,
+        token::authority = taker,
+        token::token_program = token_program
     )]
     pub taker_ata_b: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        associated_token::mint = mint_b,
-        associated_token::authority = maker,
-        associated_token::token_program = token_program
+        token::mint = mint_b,
+        token::authority = maker,
+        token::token_program = token_program
     )]
     pub maker_ata_b: Box<InterfaceAccount<'info, TokenAccount>>,
 

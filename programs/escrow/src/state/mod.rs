@@ -6,6 +6,7 @@ use anchor_lang::Space;
 /// Seeds: `[b"escrow", maker.key().as_ref(), seed.to_le_bytes().as_ref()]`
 ///
 /// Authority del vault de Token A = esta PDA.
+/// Vault token account seeds: `[b"vault", escrow.key()]` (PDA, no ATA).
 ///
 /// # Layout de bytes (Borsh, sin padding entre campos)
 ///
@@ -24,6 +25,10 @@ use anchor_lang::Space;
 ///
 /// No usar `#[repr(C)]` / zero-copy aquí: el padding nativo (hasta múltiplo de 8)
 /// desalinearía `size_of` (120) vs Borsh (`INIT_SPACE` = 113).
+///
+/// Persistencia: Solana/SBF usa **Borsh packed** (little-endian). No confundir con
+/// layout de storage EVM/Solidity (`slot` packing); aquí el orden descendente por
+/// tamaño evita padding si se migra a zero-copy y minimiza rent (< 128 bytes).
 #[account]
 #[derive(InitSpace)]
 pub struct EscrowState {

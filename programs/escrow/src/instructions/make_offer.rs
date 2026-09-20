@@ -1,17 +1,18 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{
-        transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
-    },
+use anchor_spl::token_interface::{
+    transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
 };
 
-use crate::{constants::ESCROW_SEED, error::EscrowError, state::EscrowState};
+use crate::{
+    constants::{ESCROW_SEED, VAULT_SEED},
+    error::EscrowError,
+    state::EscrowState,
+};
 
-/// @notice Crea una oferta de escrow: inicializa el estado PDA, el vault ATA
-///         (authority = PDA) y deposita `amount` de Token A con `transfer_checked`.
-/// @param ctx Cuentas: maker, mints A/B, maker_ata_a, escrow, vault, programs.
-/// @param seed Identificador u64 embebido en las seeds de la PDA.
+/// @notice Crea una oferta de escrow: inicializa el estado PDA, el vault PDA
+///         (authority = escrow) y deposita `amount` de Token A con `transfer_checked`.
+/// @dev Vault usa seeds `[b"vault", escrow]` (no ATA) para ahorrar cuenta + CPI.
+/// @param seed Identificador u64 embebido en las seeds de la PDA escrow.
 /// @param receive Cantidad de Token B que el maker espera del taker.
 /// @param amount Cantidad de Token A a depositar en el vault.
 /// @return Result<()> Ok si el estado y el depósito se completaron.
@@ -61,13 +62,17 @@ pub struct MakeOffer<'info> {
     pub maker: Signer<'info>,
 
     pub mint_a: InterfaceAccount<'info, Mint>,
-    pub mint_b: InterfaceAccount<'info, Mint>,
+
+    /// Solo se persiste la pubkey; no hace falta deserializar el Mint completo.
+    /// CHECK: owned por el token program (mint SPL / Token-2022).
+    #[account(owner = token_program.key())]
+    pub mint_b: UncheckedAccount<'info>,
 
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = maker,
-        associated_token::token_program = token_program
+        token::mint = mint_a,
+        token::authority = maker,
+        token::token_program = token_program
     )]
     pub maker_ata_a: InterfaceAccount<'info, TokenAccount>,
 
@@ -83,13 +88,14 @@ pub struct MakeOffer<'info> {
     #[account(
         init,
         payer = maker,
-        associated_token::mint = mint_a,
-        associated_token::authority = escrow,
-        associated_token::token_program = token_program
+        seeds = [VAULT_SEED, escrow.key().as_ref()],
+        bump,
+        token::mint = mint_a,
+        token::authority = escrow,
+        token::token_program = token_program
     )]
     pub vault: InterfaceAccount<'info, TokenAccount>,
 
-    pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
