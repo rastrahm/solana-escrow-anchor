@@ -10,7 +10,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 | 1 | Modelo de estado on-chain | ✅ Completada |
 | 2 | MakeOffer (TDD) | ✅ Completada |
 | 3 | TakeOffer (swap atómico) | ✅ Completada |
-| 4 | Refund | ⬜ Pendiente |
+| 4 | Refund | ✅ Completada |
 | 5 | Hardening on-chain | ⬜ Pendiente |
 | 6 | Frontend: base Next.js | ⬜ Pendiente |
 | 7 | Frontend: features (TDD UI) | ⬜ Pendiente |
@@ -98,13 +98,14 @@ npm run test:program
 
 ---
 
-## Fase 4 — Refund
+## Fase 4 — Refund ✅
 
-1. **Test primero:** solo maker cancela; recupera Token A + rent.
-2. Implementar refund con PDA signer + `close_account` vault + `close = maker`.
-3. Test de ataque: no-maker intenta refund → error.
+> **Estado: completada.**
 
-**Criterio de salida:** refund + unauthorized attack en verde.
+- [x] Test primero: solo maker cancela; recupera Token A + rent.
+- [x] Implementar refund: PDA signer + `close_account` vault + `close = maker`.
+- [x] Test de ataque: no-maker intenta refund → error.
+- [x] Criterio de salida: `npm run test:program` (10 tests) en verde.
 
 ---
 
