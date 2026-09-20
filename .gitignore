@@ -1,0 +1,115 @@
+# Dependencias del sistema y entorno
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+.history/
+
+# Logs y debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Entorno y secretos (NUNCA commitear)
+.env
+.env.*
+!.env.example
+!.env.local.example
+*.pem
+id.json
+**/keypair.json
+**/id.json
+
+# ─────────────────────────────────────────────
+# Anchor / Solana / Rust
+# ─────────────────────────────────────────────
+target/
+.anchor/
+test-ledger/
+.crates/
+**/*.rs.bk
+Cargo.lock
+# Descomentar si el workspace Rust debe versionar Cargo.lock:
+# !Cargo.lock
+
+# Keypairs de deploy y wallets locales
+target/deploy/*-keypair.json
+**/deploy/*-keypair.json
+.wallets/
+*-keypair.json
+
+# Cobertura / profiling Rust
+coverage/
+lcov.info
+*.profraw
+*.profdata
+
+# ─────────────────────────────────────────────
+# Node / Next.js (frontend + tests Anchor TS)
+# ─────────────────────────────────────────────
+node_modules/
+.npm/
+.yarn/
+.pnp.*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+**/.next/
+**/out/
+next-env.d.ts
+
+# Turbopack / cache
+.turbo/
+*.tsbuildinfo
+
+# Testing frontend
+coverage/
+.nyc_output/
+vitest.config.ts.timestamp-*
+
+# TypeScript
+*.tsbuildinfo
+
+# Vercel
+.vercel/
+
+# Storybook
+storybook-static/
+
+# ─────────────────────────────────────────────
+# IDL / artefactos generados (opcional versionar IDL)
+# ─────────────────────────────────────────────
+# Por defecto se ignora target/; si quieres versionar el IDL para el frontend,
+# cópialo a una ruta versionada, p.ej. frontend/src/lib/idl/
+
+# ─────────────────────────────────────────────
+# OS / editores / backups
+# ─────────────────────────────────────────────
+*.bak
+*.tmp
+*.temp
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# Python (herramientas auxiliares ocasionales)
+__pycache__/
+*.py[cod]
+.venv/
+venv/

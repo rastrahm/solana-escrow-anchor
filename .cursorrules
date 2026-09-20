@@ -1,0 +1,47 @@
+# .cursorrules — solana-escrow-anchor
+
+## MODULE OVERVIEW
+Focus on building a trustless, atomic SPL-token escrow program in Solana using Rust, Anchor, and SPL Token / Token-2022 interfaces. Handled mechanics include PDA-controlled vault management, CPI signers, byte-level account layout optimization, and automatic rent reclaiming.
+
+---
+
+## 1. TECHNICAL CONSTRAINTS & STACK
+
+- **Anchor Version:** Anchor 0.30+ compatible syntax.
+- **Language:** Rust 1.75+.
+- **Token Program:** Use `anchor_spl::token_interface` (`TokenInterface`, `Mint`, `TokenAccount`) to ensure cross-compatibility with both legacy `spl-token` and `spl-token-2022`.
+- **Clock & Constraints:** Enforce strict PDA seed checking and account constraint macros (`#[account(...)]`).
+
+---
+
+## 2. BYTE OPTIMIZATION & ACCOUNT LAYOUT
+
+- **Compact Data Types:** Use exact primitive types (`u64`, `u8`) without padded allocations. Avoid dynamic types (`String`, `Vec`) inside on-chain state to lock account sizes to fixed, minimal limits.
+- **Space Calculation Standard:** Calculate exact account space using Anchor's `#[derive(InitSpace)]` or explicit sum:
+  `8 (Discriminator) + EscrowState::INIT_SPACE`.
+- **Memory Alignment & Field Ordering:** Order fields within state structs by size descending (`Pubkey` [32] -> `u64` [8] -> `u8` [1]) to optimize memory alignment in BPF/SBF compilation and minimize heap allocation overhead.
+- **Rent Minimization:** Keep state sizes strictly below 128 bytes where possible to maintain rent-exempt costs at minimum lamport levels.
+
+---
+
+## 3. CODING & SECURITY RULES
+
+- **PDAs & Vault Authority:**
+  - `EscrowState` seeds: `[b"escrow", maker.key().as_ref(), seed.to_le_bytes().as_ref()]`.
+  - Vault token account must use the `EscrowState` PDA as its authority.
+- **Transfer Operations:** Always use `transfer_checked` instead of `transfer` to validate decimals explicitly and protect against rounding or mismatch exploits.
+- **PDA Signer Context:** Always pass correct `signer_seeds` via `CpiContext::new_with_signer` when moving tokens out of the vault or closing vault accounts.
+- **Account Closing & Rent Recovery:** 
+  - Ensure `close = maker` is defined on `EscrowState` during `TakeOffer` and `Refund`.
+  - Explicitly execute `close_account` on the vault token account via CPI to prevent orphan lamports.
+- **Reentrancy & Atomic Validation:** Ensure state modification and CPI transfers are validated sequentially; all transfers revert atomically if conditions are unmet.
+
+---
+
+## 4. TESTING REQUIREMENTS (TypeScript / Anchor Tests)
+
+- **`MakeOffer` Success Test:** Verify correct state initialization and vault token deposit.
+- **`TakeOffer` Atomic Swap Test:** Confirm Taker receives Token A, Maker receives Token B, vault closes, and lamports are returned.
+- **`Refund` Test:** Confirm Maker can cancel an active escrow and reclaim all deposited tokens + rent.
+- **Unauthorized Account Attack Test:** Assert failure when a non-maker attempts to call `Refund` or pass fake token mints.
+- **Space & Allocation Benchmarking:** Verify account allocation matches target discriminator + byte layout without excess padding.
