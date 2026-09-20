@@ -7,6 +7,8 @@
   },
   "scripts": {
     "build:program": "bash scripts/build-program.sh",
+    "test:program": "npm run build:program && anchor test --skip-build",
+    "test:layout": "cargo test -p escrow --lib layout_tests",
     "build:frontend": "npm --prefix frontend run build",
     "dev:frontend": "npm --prefix frontend run dev",
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
