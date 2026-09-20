@@ -11,7 +11,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 | 2 | MakeOffer (TDD) | ✅ Completada |
 | 3 | TakeOffer (swap atómico) | ✅ Completada |
 | 4 | Refund | ✅ Completada |
-| 5 | Hardening on-chain | ⬜ Pendiente |
+| 5 | Hardening on-chain | ✅ Completada |
 | 6 | Frontend: base Next.js | ⬜ Pendiente |
 | 7 | Frontend: features (TDD UI) | ⬜ Pendiente |
 | 8 | Integración y despliegue | ⬜ Pendiente |
@@ -109,16 +109,22 @@ npm run test:program
 
 ---
 
-## Fase 5 — Hardening on-chain
+## Fase 5 — Hardening on-chain ✅
 
-1. Revisar ownership, signers, account substitution (usar [05-registro-ataques.md](./05-registro-ataques.md)).
-2. Confirmar siempre `transfer_checked` (decimals).
-3. Medir compute units; ajustar si hace falta.
-4. Benchmark de espacio sin padding excesivo.
-5. Completar checklist pre-despliegue del registro de ataques.
-6. `anchor test` / `npm run test:program` completo en localnet.
+> **Estado: completada.**
 
-**Criterio de salida:** suite 100% verde + checklist pre-despliegue sin ❌ abiertos.
+- [x] Revisar ownership, signers, account substitution ([05-registro-ataques.md](./05-registro-ataques.md)).
+- [x] Confirmar solo `transfer_checked` (`npm run harden:check`).
+- [x] Medir compute units (MakeOffer < 100k vía simulación).
+- [x] Benchmark layout: 121 bytes Borsh packed, little-endian, `Pubkey`→`u64`→`u8`.
+- [x] Tests seguridad: receive=0, same mint, mint falso, refund no-maker, offsets on-chain.
+- [x] Criterio: `npm run test:harden` — 14 tests TS + 7 layout Rust + harden-check.
+
+```bash
+npm run test:harden
+```
+
+> Nota: la persistencia es **Solana/SBF + Borsh**, no layout de storage EVM.
 
 ---
 

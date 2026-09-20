@@ -4,11 +4,14 @@ use anchor_spl::token_interface::{
     TransferChecked,
 };
 
-use crate::{constants::ESCROW_SEED, error::EscrowError, state::EscrowState};
+use crate::{
+    constants::{ESCROW_SEED, VAULT_SEED},
+    error::EscrowError,
+    state::EscrowState,
+};
 
 /// @notice Cancela una oferta activa: el maker recupera Token A del vault y el rent.
 /// @dev Solo el maker (signer + `has_one`) puede invocar. Cierra vault y EscrowState.
-/// @param ctx Cuentas: maker, escrow, mint_a, vault, maker_ata_a, token_program.
 /// @return Result<()> Ok si tokens y rent volvieron al maker.
 pub fn refund(ctx: Context<Refund>) -> Result<()> {
     let seed = ctx.accounts.escrow.seed;
@@ -26,7 +29,6 @@ pub fn refund(ctx: Context<Refund>) -> Result<()> {
         &[bump],
     ]];
 
-    // Vault → Maker: Token A (PDA signer)
     transfer_checked(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -42,7 +44,6 @@ pub fn refund(ctx: Context<Refund>) -> Result<()> {
         ctx.accounts.mint_a.decimals,
     )?;
 
-    // Cerrar vault → rent al maker
     close_account(CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info(),
         CloseAccount {
@@ -75,17 +76,19 @@ pub struct Refund<'info> {
 
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = escrow,
-        associated_token::token_program = token_program
+        seeds = [VAULT_SEED, escrow.key().as_ref()],
+        bump,
+        token::mint = mint_a,
+        token::authority = escrow,
+        token::token_program = token_program
     )]
     pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = maker,
-        associated_token::token_program = token_program
+        token::mint = mint_a,
+        token::authority = maker,
+        token::token_program = token_program
     )]
     pub maker_ata_a: Box<InterfaceAccount<'info, TokenAccount>>,
 

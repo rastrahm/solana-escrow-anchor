@@ -2,12 +2,10 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program, BN } from "@coral-xyz/anchor";
 import { expect } from "chai";
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   createAssociatedTokenAccount,
   createMint,
   getAccount,
-  getAssociatedTokenAddressSync,
   mintTo,
 } from "@solana/spl-token";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
@@ -37,6 +35,17 @@ function escrowPda(
     ],
     programId
   );
+}
+
+/** Vault token account PDA: ["vault", escrow] — no ATA. */
+function vaultPda(
+  programId: PublicKey,
+  escrow: PublicKey
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("vault"), escrow.toBuffer()],
+    programId
+  )[0];
 }
 
 describe("escrow — layout / space (Fase 1)", () => {
@@ -150,13 +159,7 @@ describe("escrow — make_offer (Fase 2)", () => {
     );
 
     [escrow] = escrowPda(program.programId, maker.publicKey, seed);
-    vault = getAssociatedTokenAddressSync(
-      mintA,
-      escrow,
-      true,
-      TOKEN_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
+    vault = vaultPda(program.programId, escrow);
   });
 
   it("MakeOffer: inicializa EscrowState, deposita Token A en el vault", async () => {
@@ -169,7 +172,6 @@ describe("escrow — make_offer (Fase 2)", () => {
         makerAtaA,
         escrow,
         vault,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
@@ -213,12 +215,7 @@ describe("escrow — make_offer (Fase 2)", () => {
       maker.publicKey,
       otherSeed
     );
-    const otherVault = getAssociatedTokenAddressSync(
-      mintA,
-      otherEscrow,
-      true,
-      TOKEN_PROGRAM_ID
-    );
+    const otherVault = vaultPda(program.programId, otherEscrow);
 
     // amount=0 se rechaza en el handler antes del transfer; no hace falta saldo.
     try {
@@ -231,7 +228,6 @@ describe("escrow — make_offer (Fase 2)", () => {
           makerAtaA,
           escrow: otherEscrow,
           vault: otherVault,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
@@ -353,12 +349,7 @@ describe("escrow — take_offer (Fase 3)", () => {
     );
 
     [escrow] = escrowPda(program.programId, maker.publicKey, seed);
-    vault = getAssociatedTokenAddressSync(
-      mintA,
-      escrow,
-      true,
-      TOKEN_PROGRAM_ID
-    );
+    vault = vaultPda(program.programId, escrow);
 
     await program.methods
       .makeOffer(seed, receiveAmount, depositAmount)
@@ -369,7 +360,6 @@ describe("escrow — take_offer (Fase 3)", () => {
         makerAtaA,
         escrow,
         vault,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
@@ -459,12 +449,7 @@ describe("escrow — take_offer (Fase 3)", () => {
     );
 
     const [escrow2] = escrowPda(program.programId, maker.publicKey, attackSeed);
-    const vault2 = getAssociatedTokenAddressSync(
-      mintA,
-      escrow2,
-      true,
-      TOKEN_PROGRAM_ID
-    );
+    const vault2 = vaultPda(program.programId, escrow2);
 
     await program.methods
       .makeOffer(attackSeed, receive, deposit)
@@ -475,7 +460,6 @@ describe("escrow — take_offer (Fase 3)", () => {
         makerAtaA: makerAtaA2,
         escrow: escrow2,
         vault: vault2,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
@@ -590,12 +574,7 @@ describe("escrow — refund (Fase 4)", () => {
     );
 
     [escrow] = escrowPda(program.programId, maker.publicKey, seed);
-    vault = getAssociatedTokenAddressSync(
-      mintA,
-      escrow,
-      true,
-      TOKEN_PROGRAM_ID
-    );
+    vault = vaultPda(program.programId, escrow);
 
     await program.methods
       .makeOffer(seed, receiveAmount, depositAmount)
@@ -606,7 +585,6 @@ describe("escrow — refund (Fase 4)", () => {
         makerAtaA,
         escrow,
         vault,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
@@ -668,5 +646,204 @@ describe("escrow — refund (Fase 4)", () => {
 
     const makerLamportsAfter = await connection.getBalance(maker.publicKey);
     expect(makerLamportsAfter).to.be.greaterThan(makerLamportsBefore);
+  });
+});
+
+describe("escrow — hardening / seguridad (Fase 5)", () => {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  const program = anchor.workspace.escrow as Program<Escrow>;
+  const connection = provider.connection;
+  const maker = (provider.wallet as anchor.Wallet).payer;
+
+  const decimals = 6;
+  const depositAmount = new BN(1_000_000);
+  const receiveAmount = new BN(2_000_000);
+
+  let mintA: PublicKey;
+  let mintB: PublicKey;
+  let makerAtaA: PublicKey;
+
+  before(async () => {
+    mintA = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    mintB = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    makerAtaA = await createAssociatedTokenAccount(
+      connection,
+      maker,
+      mintA,
+      maker.publicKey,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    await mintTo(
+      connection,
+      maker,
+      mintA,
+      makerAtaA,
+      maker,
+      BigInt((depositAmount.toNumber() * 5).toString()),
+      [],
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+  });
+
+  it("MakeOffer falla con receive = 0 (InvalidAmount)", async () => {
+    const seed = new BN(201);
+    const [escrow] = escrowPda(program.programId, maker.publicKey, seed);
+    const vault = vaultPda(program.programId, escrow);
+
+    try {
+      await program.methods
+        .makeOffer(seed, new BN(0), depositAmount)
+        .accountsPartial({
+          maker: maker.publicKey,
+          mintA,
+          mintB,
+          makerAtaA,
+          escrow,
+          vault,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+      expect.fail("debió rechazar receive = 0");
+    } catch (err: unknown) {
+      expect(String(err)).to.match(/InvalidAmount|custom program error|6002/i);
+    }
+  });
+
+  it("MakeOffer falla con mint_a == mint_b (InvalidMint)", async () => {
+    const seed = new BN(202);
+    const [escrow] = escrowPda(program.programId, maker.publicKey, seed);
+    const vault = vaultPda(program.programId, escrow);
+
+    try {
+      await program.methods
+        .makeOffer(seed, receiveAmount, depositAmount)
+        .accountsPartial({
+          maker: maker.publicKey,
+          mintA,
+          mintB: mintA,
+          makerAtaA,
+          escrow,
+          vault,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+      expect.fail("debió rechazar mints iguales");
+    } catch (err: unknown) {
+      expect(String(err)).to.match(/InvalidMint|custom program error|6001/i);
+    }
+  });
+
+  it("layout on-chain Borsh: offsets packed Pubkey→u64→u8 (SBF, no EVM)", async () => {
+    const seed = new BN(203);
+    const [escrow, bump] = escrowPda(
+      program.programId,
+      maker.publicKey,
+      seed
+    );
+    const vault = vaultPda(program.programId, escrow);
+
+    await program.methods
+      .makeOffer(seed, receiveAmount, depositAmount)
+      .accountsPartial({
+        maker: maker.publicKey,
+        mintA,
+        mintB,
+        makerAtaA,
+        escrow,
+        vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const info = await connection.getAccountInfo(escrow);
+    expect(info).to.not.be.null;
+    const data = info!.data;
+    expect(data.length).to.equal(EXPECTED_TOTAL_SPACE);
+
+    // Offsets absolutos (incluye discriminator Anchor de 8 bytes)
+    expect(new PublicKey(data.subarray(8, 40)).equals(maker.publicKey)).to.equal(
+      true
+    );
+    expect(new PublicKey(data.subarray(40, 72)).equals(mintA)).to.equal(true);
+    expect(new PublicKey(data.subarray(72, 104)).equals(mintB)).to.equal(true);
+
+    const receiveLe = data.readBigUInt64LE(104);
+    const seedLe = data.readBigUInt64LE(112);
+    expect(receiveLe.toString()).to.equal(receiveAmount.toString());
+    expect(seedLe.toString()).to.equal(seed.toString());
+    expect(data[120]).to.equal(bump);
+
+    // Persistencia sin padding: último byte útil = bump
+    expect(data.length - 1).to.equal(120);
+  });
+
+  it("MakeOffer consume compute units de forma razonable (< 100k)", async () => {
+    const seed = new BN(204);
+    const [escrow] = escrowPda(program.programId, maker.publicKey, seed);
+    const vault = vaultPda(program.programId, escrow);
+
+    const tx = await program.methods
+      .makeOffer(seed, receiveAmount, depositAmount)
+      .accountsPartial({
+        maker: maker.publicKey,
+        mintA,
+        mintB,
+        makerAtaA,
+        escrow,
+        vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .transaction();
+
+    tx.feePayer = maker.publicKey;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+    const sim = await connection.simulateTransaction(tx);
+    expect(sim.value.err).to.equal(null);
+    const cu = sim.value.unitsConsumed;
+    expect(cu, "unitsConsumed").to.be.a("number");
+    // Umbral holgado; MakeOffer tipicamente ~25–60k CU tras optimizaciones.
+    expect(cu!).to.be.lessThan(80_000);
+    // eslint-disable-next-line no-console
+    console.log("    MakeOffer simulated CU:", cu);
+
+    await program.methods
+      .makeOffer(seed, receiveAmount, depositAmount)
+      .accountsPartial({
+        maker: maker.publicKey,
+        mintA,
+        mintB,
+        makerAtaA,
+        escrow,
+        vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
   });
 });

@@ -49,6 +49,7 @@ pub mod escrow {
 #[cfg(test)]
 mod layout_tests {
     use super::EscrowState;
+    use anchor_lang::prelude::Pubkey;
     use anchor_lang::Space;
 
     /// 3×Pubkey(32) + 2×u64(8) + u8(1) = 113
@@ -102,5 +103,42 @@ mod layout_tests {
         assert!(EscrowState::OFF_RECEIVE < EscrowState::OFF_SEED);
         assert!(EscrowState::OFF_SEED < EscrowState::OFF_BUMP);
         assert_eq!(EscrowState::OFF_BUMP, EscrowState::SPACE - 1);
+    }
+
+    /// Persistencia on-chain (Borsh / SBF): packed, little-endian, sin padding.
+    /// Nota: esto NO es layout EVM/Solidity; Solana serializa con Borsh.
+    #[test]
+    fn borsh_persistence_is_packed_little_endian_descending() {
+        use anchor_lang::AnchorSerialize;
+
+        let maker = Pubkey::new_from_array([0x11; 32]);
+        let mint_a = Pubkey::new_from_array([0x22; 32]);
+        let mint_b = Pubkey::new_from_array([0x33; 32]);
+        let receive: u64 = 0x0102_0304_0506_0708;
+        let seed: u64 = 0xA0B0_C0D0_E0F0_0011;
+        let bump: u8 = 255;
+
+        let state = EscrowState {
+            maker,
+            mint_a,
+            mint_b,
+            receive,
+            seed,
+            bump,
+        };
+
+        let buf = state.try_to_vec().expect("serialize EscrowState");
+        assert_eq!(buf.len(), EscrowState::INIT_SPACE);
+
+        // Offsets relativos al payload (sin discriminator de cuenta)
+        assert_eq!(&buf[0..32], maker.as_ref());
+        assert_eq!(&buf[32..64], mint_a.as_ref());
+        assert_eq!(&buf[64..96], mint_b.as_ref());
+        assert_eq!(&buf[96..104], &receive.to_le_bytes());
+        assert_eq!(&buf[104..112], &seed.to_le_bytes());
+        assert_eq!(buf[112], bump);
+
+        // Sin bytes de relleno: longitud exacta = suma de campos
+        assert_eq!(buf.len(), 32 + 32 + 32 + 8 + 8 + 1);
     }
 }
