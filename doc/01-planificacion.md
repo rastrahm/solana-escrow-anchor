@@ -14,7 +14,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 | 5 | Hardening on-chain | ✅ Completada |
 | 6 | Frontend: base Next.js | ✅ Completada |
 | 7 | Frontend: features (TDD UI) | ✅ Completada |
-| 8 | Integración y despliegue | ⬜ Pendiente |
+| 8 | Integración y despliegue | ✅ Completada |
 
 ---
 
@@ -166,7 +166,9 @@ Flujo manual localnet (Fase 8 formaliza deploy): conectar wallet → crear ofert
 
 ---
 
-## Fase 8 — Integración y despliegue
+## Fase 8 — Integración y despliegue ✅
+
+> **Estado: completada** (devnet + README + checklist).
 
 - [x] Desplegar programa a **devnet** (`2nak96ykerNBL3DkTcWoUKPgiENtLBS8ij9LhyPGXrAS`).
 - [x] Actualizar IDL e ID: `Anchor.toml` `[programs.devnet]`, `frontend/src/lib/idl/`.
