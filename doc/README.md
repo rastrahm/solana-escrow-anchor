@@ -10,6 +10,7 @@ Documentación de planificación y diseño para un escrow atómico de tokens SPL
 | [02-diagrama-flujo.md](./02-diagrama-flujo.md) | Diagrama de flujo del sistema y decisiones |
 | [03-diagrama-clases.md](./03-diagrama-clases.md) | Diagrama de clases / estructura de cuentas y módulos |
 | [04-flujograma.md](./04-flujograma.md) | Flujograma de instrucciones on-chain y UX |
+| [05-registro-ataques.md](./05-registro-ataques.md) | Biblioteca de ataques Solana + checklist pre-despliegue |
 
 ## Stack objetivo
 

@@ -9,7 +9,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 | 0 | Setup del monorepo | ✅ Completada |
 | 1 | Modelo de estado on-chain | ✅ Completada |
 | 2 | MakeOffer (TDD) | ✅ Completada |
-| 3 | TakeOffer (swap atómico) | ⬜ Pendiente |
+| 3 | TakeOffer (swap atómico) | ✅ Completada |
 | 4 | Refund | ⬜ Pendiente |
 | 5 | Hardening on-chain | ⬜ Pendiente |
 | 6 | Frontend: base Next.js | ⬜ Pendiente |
@@ -84,17 +84,17 @@ npm run test:program
 
 ---
 
-## Fase 3 — TakeOffer (swap atómico)
+## Fase 3 — TakeOffer (swap atómico) ✅
 
-1. **Test primero:** taker paga Token B al maker; recibe Token A; vault y escrow se cierran; rent al maker.
-2. Implementar:
-   - Taker → Maker: `transfer_checked` (Token B)
-   - Vault → Taker: `transfer_checked` con `CpiContext::new_with_signer`
-   - `close_account` del vault (CPI con signer seeds)
-   - `close = maker` en `EscrowState`
-3. Test de mints falsos / cuentas no autorizadas (debe fallar).
+> **Estado: completada.**
 
-**Criterio de salida:** swap atómico + cierre de cuentas verificados.
+- [x] Test primero: taker paga Token B; recibe Token A; vault/escrow cierran; rent al maker.
+- [x] Implementar:
+  - Taker → Maker: `transfer_checked` (Token B)
+  - Vault → Taker: `transfer_checked` con PDA signer
+  - `close_account` del vault + `close = maker` en EscrowState
+- [x] Test mint falso (account substitution) → falla.
+- [x] Criterio de salida: `npm run test:program` (8 tests) en verde.
 
 ---
 
@@ -110,13 +110,14 @@ npm run test:program
 
 ## Fase 5 — Hardening on-chain
 
-1. Revisar ownership, signers, account substitution.
+1. Revisar ownership, signers, account substitution (usar [05-registro-ataques.md](./05-registro-ataques.md)).
 2. Confirmar siempre `transfer_checked` (decimals).
 3. Medir compute units; ajustar si hace falta.
 4. Benchmark de espacio sin padding excesivo.
-5. `anchor test` completo en localnet.
+5. Completar checklist pre-despliegue del registro de ataques.
+6. `anchor test` / `npm run test:program` completo en localnet.
 
-**Criterio de salida:** suite de tests del programa 100% verde.
+**Criterio de salida:** suite 100% verde + checklist pre-despliegue sin ❌ abiertos.
 
 ---
 

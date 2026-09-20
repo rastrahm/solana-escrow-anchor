@@ -30,6 +30,13 @@ pub mod escrow {
     ) -> Result<()> {
         instructions::make_offer::make_offer(ctx, seed, receive, amount)
     }
+
+    /// @notice Acepta una oferta: swap atómico Token B → maker y Token A → taker.
+    /// @dev Cierra vault y EscrowState; el rent vuelve al maker.
+    /// @return Result<()> Ok si el swap y los cierres fueron exitosos.
+    pub fn take_offer(ctx: Context<TakeOffer>) -> Result<()> {
+        instructions::take_offer::take_offer(ctx)
+    }
 }
 
 #[cfg(test)]
