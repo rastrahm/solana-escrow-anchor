@@ -1,16 +1,19 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
+import { Program, BN } from "@coral-xyz/anchor";
 import { expect } from "chai";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccount,
+  createMint,
+  getAccount,
+  getAssociatedTokenAddressSync,
+  mintTo,
+} from "@solana/spl-token";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { Escrow } from "../target/types/escrow";
 import idl from "../target/idl/escrow.json";
 
-/**
- * Layout esperado de EscrowState (campos por tamaño descendente):
- * discriminator(8) + maker(32) + mint_a(32) + mint_b(32) + receive(8) + seed(8) + bump(1) = 121
- *
- * La cuenta aparece en el IDL cuando una instrucción la referencie (Fase 2 / MakeOffer).
- * El layout exacto se valida en Rust: `cargo test -p escrow --lib layout_tests`.
- */
 const EXPECTED_INIT_SPACE = 32 + 32 + 32 + 8 + 8 + 1; // 113
 const EXPECTED_TOTAL_SPACE = 8 + EXPECTED_INIT_SPACE; // 121
 
@@ -20,6 +23,21 @@ const EXPECTED_ERRORS = [
   { code: 6002, name: "InvalidAmount" },
   { code: 6003, name: "ArithmeticOverflow" },
 ] as const;
+
+function escrowPda(
+  programId: PublicKey,
+  maker: PublicKey,
+  seed: BN
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("escrow"),
+      maker.toBuffer(),
+      seed.toArrayLike(Buffer, "le", 8),
+    ],
+    programId
+  );
+}
 
 describe("escrow — layout / space (Fase 1)", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -44,5 +62,184 @@ describe("escrow — layout / space (Fase 1)", () => {
     expect(program.programId.toBase58()).to.equal(
       "2nak96ykerNBL3DkTcWoUKPgiENtLBS8ij9LhyPGXrAS"
     );
+  });
+
+  it("IDL incluye la cuenta EscrowState tras MakeOffer", () => {
+    const accounts = (idl as anchor.Idl).accounts ?? [];
+    const types = (idl as anchor.Idl).types ?? [];
+    const hasAccount = accounts.some(
+      (a) => a.name === "escrowState" || a.name === "EscrowState"
+    );
+    const typeDef = types.find(
+      (t) => t.name === "EscrowState" || t.name === "escrowState"
+    );
+    expect(hasAccount || typeDef, "EscrowState en IDL").to.exist;
+    if (typeDef && typeDef.type.kind === "struct") {
+      // IDL JSON usa snake_case; target/types/*.ts usa camelCase.
+      expect(typeDef.type.fields.map((f) => f.name)).to.deep.equal([
+        "maker",
+        "mint_a",
+        "mint_b",
+        "receive",
+        "seed",
+        "bump",
+      ]);
+    }
+  });
+});
+
+describe("escrow — make_offer (Fase 2)", () => {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  const program = anchor.workspace.escrow as Program<Escrow>;
+  const connection = provider.connection;
+  const maker = (provider.wallet as anchor.Wallet).payer;
+
+  const decimals = 6;
+  const seed = new BN(42);
+  const depositAmount = new BN(1_000_000); // 1 Token A
+  const receiveAmount = new BN(2_000_000); // 2 Token B esperados
+
+  let mintA: PublicKey;
+  let mintB: PublicKey;
+  let makerAtaA: PublicKey;
+  let escrow: PublicKey;
+  let vault: PublicKey;
+
+  before(async () => {
+    mintA = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    mintB = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    makerAtaA = await createAssociatedTokenAccount(
+      connection,
+      maker,
+      mintA,
+      maker.publicKey,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    await mintTo(
+      connection,
+      maker,
+      mintA,
+      makerAtaA,
+      maker,
+      BigInt(depositAmount.toString()),
+      [],
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    [escrow] = escrowPda(program.programId, maker.publicKey, seed);
+    vault = getAssociatedTokenAddressSync(
+      mintA,
+      escrow,
+      true,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+  });
+
+  it("MakeOffer: inicializa EscrowState, deposita Token A en el vault", async () => {
+    await program.methods
+      .makeOffer(seed, receiveAmount, depositAmount)
+      .accountsPartial({
+        maker: maker.publicKey,
+        mintA,
+        mintB,
+        makerAtaA,
+        escrow,
+        vault,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const escrowAccount = await program.account.escrowState.fetch(escrow);
+    expect(escrowAccount.maker.toBase58()).to.equal(maker.publicKey.toBase58());
+    expect(escrowAccount.mintA.toBase58()).to.equal(mintA.toBase58());
+    expect(escrowAccount.mintB.toBase58()).to.equal(mintB.toBase58());
+    expect(escrowAccount.receive.toString()).to.equal(receiveAmount.toString());
+    expect(escrowAccount.seed.toString()).to.equal(seed.toString());
+    expect(escrowAccount.bump).to.be.a("number");
+
+    const vaultAccount = await getAccount(
+      connection,
+      vault,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    expect(vaultAccount.amount.toString()).to.equal(depositAmount.toString());
+    expect(vaultAccount.owner.toBase58()).to.equal(escrow.toBase58());
+    expect(vaultAccount.mint.toBase58()).to.equal(mintA.toBase58());
+
+    const makerAfter = await getAccount(
+      connection,
+      makerAtaA,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    expect(makerAfter.amount.toString()).to.equal("0");
+
+    const escrowInfo = await connection.getAccountInfo(escrow);
+    expect(escrowInfo).to.not.be.null;
+    expect(escrowInfo!.data.length).to.equal(EXPECTED_TOTAL_SPACE);
+  });
+
+  it("MakeOffer falla con amount = 0", async () => {
+    const otherSeed = new BN(99);
+    const [otherEscrow] = escrowPda(
+      program.programId,
+      maker.publicKey,
+      otherSeed
+    );
+    const otherVault = getAssociatedTokenAddressSync(
+      mintA,
+      otherEscrow,
+      true,
+      TOKEN_PROGRAM_ID
+    );
+
+    // amount=0 se rechaza en el handler antes del transfer; no hace falta saldo.
+    try {
+      await program.methods
+        .makeOffer(otherSeed, receiveAmount, new BN(0))
+        .accountsPartial({
+          maker: maker.publicKey,
+          mintA,
+          mintB,
+          makerAtaA,
+          escrow: otherEscrow,
+          vault: otherVault,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+      expect.fail("debió rechazar amount = 0");
+    } catch (err: unknown) {
+      const message = String(err);
+      expect(message).to.match(/InvalidAmount|custom program error|6002/i);
+    }
   });
 });

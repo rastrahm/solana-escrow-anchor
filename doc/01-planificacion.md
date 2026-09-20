@@ -8,7 +8,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 |------|-------------|--------|
 | 0 | Setup del monorepo | ✅ Completada |
 | 1 | Modelo de estado on-chain | ✅ Completada |
-| 2 | MakeOffer (TDD) | ⬜ Pendiente |
+| 2 | MakeOffer (TDD) | ✅ Completada |
 | 3 | TakeOffer (swap atómico) | ⬜ Pendiente |
 | 4 | Refund | ⬜ Pendiente |
 | 5 | Hardening on-chain | ⬜ Pendiente |
@@ -65,17 +65,22 @@ npm run test:program    # build + tests TS (IDL errors + space)
 
 ---
 
-## Fase 2 — MakeOffer (TDD)
+## Fase 2 — MakeOffer (TDD) ✅
 
-1. **Test primero:** maker crea escrow, vault recibe Token A, estado correcto.
-2. Implementar instrucción `make_offer`:
-   - `init` de `EscrowState` (payer = maker)
-   - `init` vault ATA con authority = PDA escrow
-   - CPI `transfer_checked` maker → vault
-3. Constraints explícitas: `seeds`, `bump`, `token_program` vía `TokenInterface`.
-4. Documentar instrucción (notice / accounts / return).
+> **Estado: completada.**
 
-**Criterio de salida:** test MakeOffer en verde.
+- [x] Test primero: maker crea escrow, vault recibe Token A, estado correcto.
+- [x] Implementar `make_offer`:
+  - `init` de `EscrowState` (payer = maker)
+  - `init` vault ATA con authority = PDA escrow
+  - CPI `transfer_checked` maker → vault
+- [x] Constraints explícitas: `seeds`, `bump`, `token_program` vía `TokenInterface`.
+- [x] Documentar instrucción (notice / accounts / return).
+- [x] Criterio de salida: tests MakeOffer en verde (`npm run test:program`).
+
+```bash
+npm run test:program
+```
 
 ---
 
