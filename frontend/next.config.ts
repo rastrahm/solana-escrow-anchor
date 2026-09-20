@@ -6,6 +6,22 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      crypto: false,
+    };
+    config.externals = [
+      ...(Array.isArray(config.externals) ? config.externals : []),
+      "pino-pretty",
+      "lokijs",
+      "encoding",
+    ];
+    return config;
+  },
 };
 
 export default nextConfig;

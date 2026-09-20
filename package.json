@@ -13,6 +13,7 @@
     "test:harden": "npm run harden:check && npm run test:layout && npm run test:program",
     "build:frontend": "npm --prefix frontend run build",
     "dev:frontend": "npm --prefix frontend run dev",
+    "test:frontend": "npm --prefix frontend test",
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },
