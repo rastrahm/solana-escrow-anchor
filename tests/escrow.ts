@@ -243,3 +243,278 @@ describe("escrow — make_offer (Fase 2)", () => {
     }
   });
 });
+
+describe("escrow — take_offer (Fase 3)", () => {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  const program = anchor.workspace.escrow as Program<Escrow>;
+  const connection = provider.connection;
+  const maker = (provider.wallet as anchor.Wallet).payer;
+
+  const decimals = 6;
+  const seed = new BN(77);
+  const depositAmount = new BN(1_000_000);
+  const receiveAmount = new BN(2_000_000);
+
+  let taker: anchor.web3.Keypair;
+  let mintA: PublicKey;
+  let mintB: PublicKey;
+  let makerAtaA: PublicKey;
+  let makerAtaB: PublicKey;
+  let takerAtaA: PublicKey;
+  let takerAtaB: PublicKey;
+  let escrow: PublicKey;
+  let vault: PublicKey;
+  let makerLamportsBefore: number;
+
+  before(async () => {
+    taker = anchor.web3.Keypair.generate();
+    const sig = await connection.requestAirdrop(
+      taker.publicKey,
+      2 * anchor.web3.LAMPORTS_PER_SOL
+    );
+    await connection.confirmTransaction(sig, "confirmed");
+
+    mintA = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    mintB = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    makerAtaA = await createAssociatedTokenAccount(
+      connection,
+      maker,
+      mintA,
+      maker.publicKey,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    makerAtaB = await createAssociatedTokenAccount(
+      connection,
+      maker,
+      mintB,
+      maker.publicKey,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    takerAtaA = await createAssociatedTokenAccount(
+      connection,
+      maker,
+      mintA,
+      taker.publicKey,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    takerAtaB = await createAssociatedTokenAccount(
+      connection,
+      maker,
+      mintB,
+      taker.publicKey,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    await mintTo(
+      connection,
+      maker,
+      mintA,
+      makerAtaA,
+      maker,
+      BigInt(depositAmount.toString()),
+      [],
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    await mintTo(
+      connection,
+      maker,
+      mintB,
+      takerAtaB,
+      maker,
+      BigInt(receiveAmount.toString()),
+      [],
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    [escrow] = escrowPda(program.programId, maker.publicKey, seed);
+    vault = getAssociatedTokenAddressSync(
+      mintA,
+      escrow,
+      true,
+      TOKEN_PROGRAM_ID
+    );
+
+    await program.methods
+      .makeOffer(seed, receiveAmount, depositAmount)
+      .accountsPartial({
+        maker: maker.publicKey,
+        mintA,
+        mintB,
+        makerAtaA,
+        escrow,
+        vault,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    makerLamportsBefore = await connection.getBalance(maker.publicKey);
+  });
+
+  it("TakeOffer: swap atómico, cierra vault y escrow, rent al maker", async () => {
+    await program.methods
+      .takeOffer()
+      .accountsPartial({
+        taker: taker.publicKey,
+        maker: maker.publicKey,
+        escrow,
+        mintA,
+        mintB,
+        vault,
+        takerAtaA,
+        takerAtaB,
+        makerAtaB,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([taker])
+      .rpc();
+
+    const takerA = await getAccount(
+      connection,
+      takerAtaA,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    expect(takerA.amount.toString()).to.equal(depositAmount.toString());
+
+    const makerB = await getAccount(
+      connection,
+      makerAtaB,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    expect(makerB.amount.toString()).to.equal(receiveAmount.toString());
+
+    const takerB = await getAccount(
+      connection,
+      takerAtaB,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    expect(takerB.amount.toString()).to.equal("0");
+
+    expect(await connection.getAccountInfo(vault)).to.be.null;
+    expect(await connection.getAccountInfo(escrow)).to.be.null;
+
+    const makerLamportsAfter = await connection.getBalance(maker.publicKey);
+    expect(makerLamportsAfter).to.be.greaterThan(makerLamportsBefore);
+  });
+
+  it("TakeOffer falla con mint A falso (account substitution)", async () => {
+    const attackSeed = new BN(88);
+    const deposit = new BN(500_000);
+    const receive = new BN(500_000);
+
+    const makerAtaA2 = makerAtaA;
+    await mintTo(
+      connection,
+      maker,
+      mintA,
+      makerAtaA2,
+      maker,
+      BigInt(deposit.toString()),
+      [],
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    // Recargar Token B al taker
+    await mintTo(
+      connection,
+      maker,
+      mintB,
+      takerAtaB,
+      maker,
+      BigInt(receive.toString()),
+      [],
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    const [escrow2] = escrowPda(program.programId, maker.publicKey, attackSeed);
+    const vault2 = getAssociatedTokenAddressSync(
+      mintA,
+      escrow2,
+      true,
+      TOKEN_PROGRAM_ID
+    );
+
+    await program.methods
+      .makeOffer(attackSeed, receive, deposit)
+      .accountsPartial({
+        maker: maker.publicKey,
+        mintA,
+        mintB,
+        makerAtaA: makerAtaA2,
+        escrow: escrow2,
+        vault: vault2,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const fakeMintA = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    try {
+      await program.methods
+        .takeOffer()
+        .accountsPartial({
+          taker: taker.publicKey,
+          maker: maker.publicKey,
+          escrow: escrow2,
+          mintA: fakeMintA,
+          mintB,
+          vault: vault2,
+          takerAtaA,
+          takerAtaB,
+          makerAtaB,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([taker])
+        .rpc();
+      expect.fail("debió rechazar mint A falso");
+    } catch (err: unknown) {
+      const message = String(err);
+      expect(message).to.match(
+        /InvalidMint|ConstraintHasOne|custom program error|6001|0x7d1/i
+      );
+    }
+  });
+});

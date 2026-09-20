@@ -8,6 +8,9 @@
 - **PDA Management**: Always use `seeds` and `bump` correctly to avoid security flaws.
 - **Compute Budget**: Monitor compute units. Optimize logic to stay within limits.
 - **Security**: Prevent "Account Substitution" and "Missing Ownership Check" attacks.
+  - Catálogo del ecosistema: https://github.com/coral-xyz/sealevel-attacks
+  - Docs Anchor: https://www.anchor-lang.com/docs/references/security-exploits
+  - Checklist de este repo: `doc/05-registro-ataques.md`
 
 # Solana Anchor Rules
 - **Account Safety**: Use `#[account(init, payer = ..., space = ...)]` properly. Always check `owner` and `signer`.
