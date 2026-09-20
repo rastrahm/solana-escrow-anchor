@@ -37,6 +37,13 @@ pub mod escrow {
     pub fn take_offer(ctx: Context<TakeOffer>) -> Result<()> {
         instructions::take_offer::take_offer(ctx)
     }
+
+    /// @notice Cancela la oferta: el maker recupera Token A y el rent.
+    /// @dev Solo el maker firmante; cierra vault + EscrowState.
+    /// @return Result<()> Ok si la cancelación fue exitosa.
+    pub fn refund(ctx: Context<Refund>) -> Result<()> {
+        instructions::refund::refund(ctx)
+    }
 }
 
 #[cfg(test)]

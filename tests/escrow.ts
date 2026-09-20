@@ -518,3 +518,155 @@ describe("escrow — take_offer (Fase 3)", () => {
     }
   });
 });
+
+describe("escrow — refund (Fase 4)", () => {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  const program = anchor.workspace.escrow as Program<Escrow>;
+  const connection = provider.connection;
+  const maker = (provider.wallet as anchor.Wallet).payer;
+
+  const decimals = 6;
+  const seed = new BN(101);
+  const depositAmount = new BN(1_500_000);
+  const receiveAmount = new BN(3_000_000);
+
+  let attacker: anchor.web3.Keypair;
+  let mintA: PublicKey;
+  let mintB: PublicKey;
+  let makerAtaA: PublicKey;
+  let escrow: PublicKey;
+  let vault: PublicKey;
+  let makerLamportsBefore: number;
+
+  before(async () => {
+    attacker = anchor.web3.Keypair.generate();
+    const sig = await connection.requestAirdrop(
+      attacker.publicKey,
+      2 * anchor.web3.LAMPORTS_PER_SOL
+    );
+    await connection.confirmTransaction(sig, "confirmed");
+
+    mintA = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    mintB = await createMint(
+      connection,
+      maker,
+      maker.publicKey,
+      null,
+      decimals,
+      undefined,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    makerAtaA = await createAssociatedTokenAccount(
+      connection,
+      maker,
+      mintA,
+      maker.publicKey,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    await mintTo(
+      connection,
+      maker,
+      mintA,
+      makerAtaA,
+      maker,
+      BigInt(depositAmount.toString()),
+      [],
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+
+    [escrow] = escrowPda(program.programId, maker.publicKey, seed);
+    vault = getAssociatedTokenAddressSync(
+      mintA,
+      escrow,
+      true,
+      TOKEN_PROGRAM_ID
+    );
+
+    await program.methods
+      .makeOffer(seed, receiveAmount, depositAmount)
+      .accountsPartial({
+        maker: maker.publicKey,
+        mintA,
+        mintB,
+        makerAtaA,
+        escrow,
+        vault,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    makerLamportsBefore = await connection.getBalance(maker.publicKey);
+  });
+
+  it("Refund falla si un no-maker intenta cancelar", async () => {
+    try {
+      await program.methods
+        .refund()
+        .accountsPartial({
+          maker: attacker.publicKey,
+          escrow,
+          mintA,
+          vault,
+          makerAtaA,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([attacker])
+        .rpc();
+      expect.fail("debió rechazar refund de no-maker");
+    } catch (err: unknown) {
+      const message = String(err);
+      expect(message).to.match(
+        /Unauthorized|ConstraintSeeds|ConstraintHasOne|custom program error|6000|0x7d6|0x7d3/i
+      );
+    }
+
+    // Escrow y vault siguen vivos
+    expect(await connection.getAccountInfo(escrow)).to.not.be.null;
+    expect(await connection.getAccountInfo(vault)).to.not.be.null;
+  });
+
+  it("Refund: maker recupera Token A, cierra vault y escrow, rent al maker", async () => {
+    await program.methods
+      .refund()
+      .accountsPartial({
+        maker: maker.publicKey,
+        escrow,
+        mintA,
+        vault,
+        makerAtaA,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    const makerA = await getAccount(
+      connection,
+      makerAtaA,
+      undefined,
+      TOKEN_PROGRAM_ID
+    );
+    expect(makerA.amount.toString()).to.equal(depositAmount.toString());
+
+    expect(await connection.getAccountInfo(vault)).to.be.null;
+    expect(await connection.getAccountInfo(escrow)).to.be.null;
+
+    const makerLamportsAfter = await connection.getBalance(maker.publicKey);
+    expect(makerLamportsAfter).to.be.greaterThan(makerLamportsBefore);
+  });
+});

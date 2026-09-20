@@ -30,15 +30,15 @@ Leyenda: ✅ mitigado · 🟡 parcial / pendiente de test · ⬜ no aplica aún 
 |---|------------------------------|--------------------|-----------------------------|--------|-----------|
 | 1 | **Account substitution** | Pasar otra cuenta válida del mismo tipo (p. ej. mint falso) | `has_one = mint_a/mint_b/maker`, seeds PDA, `associated_token::*` | ✅ | Test TakeOffer mint falso |
 | 2 | **Missing ownership check** | Usar cuenta no owned por el programa esperado | `Account<>` / `InterfaceAccount<>` validan owner + discriminator | ✅ | Tipos Anchor en Make/Take |
-| 3 | **Missing signer check** | Ejecutar sin la firma correcta | `Signer` en maker/taker; refund exigirá maker | 🟡 | Take OK; Refund Fase 4 |
+| 3 | **Missing signer check** | Ejecutar sin la firma correcta | `Signer` en maker/taker/refund | ✅ | Take + Refund (maker signer) |
 | 4 | **PDA sharing / seeds débiles** | Misma PDA para contextos distintos → drenaje | Seeds `[b"escrow", maker, seed]` por oferta | ✅ | `ESCROW_SEED` + bump guardado |
-| 5 | **Arbitrary CPI / wrong program** | CPI a programa token incorrecto | `Interface<'info, TokenInterface>` + `transfer_checked` | ✅ | Make/Take |
+| 5 | **Arbitrary CPI / wrong program** | CPI a programa token incorrecto | `Interface<'info, TokenInterface>` + `transfer_checked` | ✅ | Make/Take/Refund |
 | 6 | **Token amount / decimals mismatch** | `transfer` sin decimals → spoofing | Solo `transfer_checked` | ✅ | Regla `.cursorrules` |
-| 7 | **Closing account / orphan lamports** | Vault o state quedan abiertos con rent | `close_account` vault + `close = maker` en state | 🟡 | Take cierra ambos; Refund Fase 4 |
+| 7 | **Closing account / orphan lamports** | Vault o state quedan abiertos con rent | `close_account` vault + `close = maker` en state | ✅ | Take + Refund |
 | 8 | **Re-initialization (`init_if_needed`)** | Reabrir cuenta cerrada con datos maliciosos | No usamos `init_if_needed`; solo `init` | ✅ | MakeOffer |
 | 9 | **Type cosplay** | Cuenta con layout parecido / discriminator engañoso | Discriminator Anchor + owner check | ✅ | `Account<EscrowState>` |
 | 10 | **Integer overflow** | Montos wrap-around | `u64` + `require!(amount/receive > 0)`; perfil `overflow-checks` | 🟡 | Checks básicos; ampliar tests Fase 5 |
-| 11 | **Unauthorized refund** | No-maker cancela y roba Token A | Pendiente: `has_one = maker` + signer maker | ⬜ | Fase 4 |
+| 11 | **Unauthorized refund** | No-maker cancela y roba Token A | `maker: Signer` + `has_one` + seeds PDA | ✅ | Test Refund no-maker |
 | 12 | **Account data matching** | Authority del vault ≠ PDA escrow | Vault ATA `authority = escrow` | ✅ | MakeOffer + Take constraints |
 | 13 | **Sysvar / clock spoofing** | No usamos clock/sysvar custom | N/A | ⬜ | — |
 | 14 | **Front-running / tx ordering** | Taker compite por la misma oferta | Riesgo de mercado (una PDA por seed); no es bug de ownership | 🟡 | Documentar UX; seeds únicos |
@@ -52,14 +52,14 @@ Leyenda: ✅ mitigado · 🟡 parcial / pendiente de test · ⬜ no aplica aún 
 - [x] Toda cuenta en `#[derive(Accounts)]` con constraints explícitas (`seeds`, `bump`, `has_one`, ATA)
 - [x] Sin `UncheckedAccount` sin `constraint` documentada (maker en Take es `SystemAccount` + `has_one`)
 - [x] Sin `.unwrap()` / `.expect()` en lógica on-chain
-- [ ] Revisar Refund con las mismas reglas (Fase 4)
+- [x] Revisar Refund con las mismas reglas (Fase 4)
 
 ### Tokens
 - [x] Solo `transfer_checked`
 - [x] `TokenInterface` (SPL + Token-2022)
 - [x] Vault authority = PDA escrow
 - [x] Cierre de vault en TakeOffer
-- [ ] Cierre de vault en Refund
+- [x] Cierre de vault en Refund
 
 ### PDAs
 - [x] Seeds documentadas y estables
@@ -69,9 +69,9 @@ Leyenda: ✅ mitigado · 🟡 parcial / pendiente de test · ⬜ no aplica aún 
 ### Tests de ataque obligatorios
 - [x] MakeOffer amount = 0
 - [x] TakeOffer mint A falso
-- [ ] Refund por no-maker
+- [x] Refund por no-maker
 - [ ] Overflow / receive = 0 en Take (si aplica)
-- [ ] Espacio de cuenta = 121 bytes en init
+- [x] Espacio de cuenta = 121 bytes en init
 
 ### Build / deploy
 - [x] `declare_id!` = keypair de deploy
@@ -104,13 +104,12 @@ npm run test:layout     # layout EscrowState
 |-------------|-----------------|
 | `make_offer` | `init` PDA + vault ATA, `transfer_checked`, amount/receive > 0, mints distintos |
 | `take_offer` | `has_one` maker/mints, PDA seeds+bump, CPI signer, close vault+state |
-| `refund` (pendiente) | Solo maker signer + `has_one`, mismo cierre vault/state |
+| `refund` | Solo maker signer + `has_one`, transfer vault→maker, close vault+state |
 
 ---
 
-## Próximos pasos (Fase 4–5)
+## Próximos pasos (Fase 5)
 
-1. Implementar `refund` + test unauthorized.  
-2. Completar filas 🟡/⬜ de la matriz.  
-3. Opcional: script CI que falle si `grep` detecta `transfer(` sin `_checked` o `init_if_needed`.  
-4. Antes de mainnet: pasar la checklist completa y, idealmente, revisión externa usando Sealevel Attacks + curso Program Security.
+1. Completar filas 🟡 de la matriz (overflow, front-running, account duplication).  
+2. Opcional: script CI que falle si `grep` detecta `transfer(` sin `_checked` o `init_if_needed`.  
+3. Antes de mainnet: checklist completa + revisión externa con Sealevel Attacks.
