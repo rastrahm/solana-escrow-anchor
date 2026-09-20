@@ -7,7 +7,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 | Fase | Descripción | Estado |
 |------|-------------|--------|
 | 0 | Setup del monorepo | ✅ Completada |
-| 1 | Modelo de estado on-chain | ⬜ Pendiente |
+| 1 | Modelo de estado on-chain | ✅ Completada |
 | 2 | MakeOffer (TDD) | ⬜ Pendiente |
 | 3 | TakeOffer (swap atómico) | ⬜ Pendiente |
 | 4 | Refund | ⬜ Pendiente |
@@ -44,18 +44,24 @@ npm run dev:frontend     # next dev
 
 ---
 
-## Fase 1 — Modelo de estado on-chain
+## Fase 1 — Modelo de estado on-chain ✅
 
-1. Definir `EscrowState` con `#[account]` + `#[derive(InitSpace)]`.
-2. Ordenar campos por tamaño descendente (`Pubkey` → `u64` → `u8`):
-   - `maker`, `mint_a`, `mint_b`
-   - `receive` (cantidad Token B esperada)
-   - `seed`, `bump`
-3. Calcular espacio: `8 + EscrowState::INIT_SPACE` (< 128 bytes objetivo).
-4. Documentar seeds: `[b"escrow", maker.key().as_ref(), seed.to_le_bytes().as_ref()]`.
-5. Definir `#[error_code]` personalizados (sin `.unwrap()` / `.expect()`).
+> **Estado: completada.**
 
-**Criterio de salida:** test de espacio/layout que valide discriminator + bytes.
+- [x] Definir `EscrowState` con `#[account]` + `#[derive(InitSpace)]`.
+- [x] Ordenar campos por tamaño descendente (`Pubkey` → `u64` → `u8`):
+  - `maker`, `mint_a`, `mint_b`
+  - `receive` (cantidad Token B esperada)
+  - `seed`, `bump`
+- [x] Calcular espacio: `EscrowState::SPACE = 8 + INIT_SPACE` = **121** (< 128).
+- [x] Documentar seeds: `[b"escrow", maker.key().as_ref(), seed.to_le_bytes().as_ref()]` (`ESCROW_SEED`).
+- [x] Definir `EscrowError`: `Unauthorized`, `InvalidMint`, `InvalidAmount`, `ArithmeticOverflow`.
+- [x] Criterio de salida: tests de layout en verde.
+
+```bash
+npm run test:layout     # Rust: INIT_SPACE / SPACE / seed
+npm run test:program    # build + tests TS (IDL errors + space)
+```
 
 ---
 
