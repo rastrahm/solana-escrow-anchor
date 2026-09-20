@@ -18,8 +18,10 @@ export const metadata: Metadata = {
   description: "Escrow atómico SPL con Anchor y Next.js",
 };
 
+const themeInitScript = `(function(){try{var k='escrow-theme';var t=localStorage.getItem(k);var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
+
 /**
- * @description Layout raíz App Router con providers Solana.
+ * @description Layout raíz App Router con providers Solana y tema.
  * @param children - Páginas hijas.
  * @returns HTML base de la dApp.
  */
@@ -27,9 +29,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-900">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

@@ -14,7 +14,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 | 5 | Hardening on-chain | ✅ Completada |
 | 6 | Frontend: base Next.js | ✅ Completada |
 | 7 | Frontend: features (TDD UI) | ✅ Completada |
-| 8 | Integración y despliegue | ⬜ Pendiente |
+| 8 | Integración y despliegue | ✅ Completada |
 
 ---
 
@@ -166,14 +166,16 @@ Flujo manual localnet (Fase 8 formaliza deploy): conectar wallet → crear ofert
 
 ---
 
-## Fase 8 — Integración y despliegue
+## Fase 8 — Integración y despliegue ✅
 
-1. Desplegar programa a devnet; actualizar IDL e ID en frontend.
-2. Variables de entorno (`.env.local`, nunca commitear secretos).
-3. Checklist de seguridad (ver `solana.cursorrules` + `.cursorrules`).
-4. README de usuario: cómo build, test y usar la UI.
+> **Estado: completada** (devnet + README + checklist).
 
-**Criterio de salida:** demo funcional en devnet.
+- [x] Desplegar programa a **devnet** (`2nak96ykerNBL3DkTcWoUKPgiENtLBS8ij9LhyPGXrAS`).
+- [x] Actualizar IDL e ID: `Anchor.toml` `[programs.devnet]`, `frontend/src/lib/idl/`.
+- [x] Variables de entorno (`.env.example` / `.env.local`; secretos no en git).
+- [x] Checklist de seguridad ([05-registro-ataques.md](./05-registro-ataques.md) + `solana.cursorrules` + `.cursorrules`).
+- [x] README de usuario en la raíz: build, test y UI.
+- [x] Criterio de salida: programa vivo en devnet + frontend apuntando al mismo Program ID.
 
 ---
 

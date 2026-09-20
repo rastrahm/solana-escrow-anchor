@@ -18,7 +18,7 @@ export function RefundButton({ onClick, disabled }: RefundButtonProps) {
       aria-label="Cancelar oferta"
       disabled={disabled}
       onClick={onClick}
-      className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 disabled:opacity-40"
+      className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 disabled:opacity-40 dark:border-zinc-600 dark:text-zinc-100"
     >
       Cancelar oferta
     </button>
