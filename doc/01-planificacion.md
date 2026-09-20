@@ -13,7 +13,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 | 4 | Refund | ✅ Completada |
 | 5 | Hardening on-chain | ✅ Completada |
 | 6 | Frontend: base Next.js | ✅ Completada |
-| 7 | Frontend: features (TDD UI) | ⬜ Pendiente |
+| 7 | Frontend: features (TDD UI) | ✅ Completada |
 | 8 | Integración y despliegue | ⬜ Pendiente |
 
 ---
@@ -146,24 +146,23 @@ npm --prefix frontend test
 
 ---
 
-## Fase 7 — Frontend: features (TDD UI)
+## Fase 7 — Frontend: features (TDD UI) ✅
 
-Orden sugerido (test de interacción → componente):
+> **Estado: completada.**
 
-| Feature | Qué hace el usuario |
-|---------|---------------------|
-| ConnectWallet | Conectar / desconectar wallet |
-| MakeOfferForm | Elegir mints, montos, seed → envía MakeOffer |
-| EscrowList | Listar escrows activos (RPC / accounts) |
-| TakeOfferButton | Aceptar oferta (swap) |
-| RefundButton | Cancelar oferta propia |
+- [x] MakeOfferForm (Zod + TDD)
+- [x] EscrowList + TakeOfferButton + RefundButton (TDD)
+- [x] Hook `useEscrow` + client Anchor (`idl` en `frontend/src/lib/idl`)
+- [x] Mensajes de tx accesibles (`role="alert"`)
+- [x] Criterio tests: `npm run test:frontend` (10) + build OK
 
-1. Validar formularios y params con Zod.
-2. Componentes ≤ ~60 líneas; extraer subcomponentes.
-3. JSDoc en cada componente, hook y Server Action.
-4. Manejo de errores de tx visibles y accesibles (roles ARIA).
+```bash
+npm run dev:frontend
+npm run test:frontend
+```
 
-**Criterio de salida:** flujo E2E manual en localnet: make → take y make → refund.
+Flujo manual localnet (Fase 8 formaliza deploy): conectar wallet → crear oferta → take o refund.
+
 
 ---
 
