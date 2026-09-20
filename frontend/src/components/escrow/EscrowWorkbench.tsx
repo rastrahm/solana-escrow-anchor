@@ -66,13 +66,13 @@ export function EscrowWorkbench() {
           <button
             type="button"
             onClick={() => void refresh()}
-            className="text-sm text-teal-800 underline"
+            className="text-sm text-teal-800 underline dark:text-teal-300"
           >
             Actualizar
           </button>
         </div>
         {loading ? (
-          <p role="status" className="text-sm text-zinc-500">
+          <p role="status" className="text-sm text-zinc-500 dark:text-zinc-400">
             Cargando…
           </p>
         ) : null}

@@ -16,7 +16,7 @@ export default function ErrorPage({
   return (
     <main className="mx-auto flex min-h-[50vh] max-w-xl flex-col justify-center gap-4 px-6">
       <h1 className="text-2xl font-semibold">Algo salió mal</h1>
-      <p role="alert" className="text-zinc-600">
+      <p role="alert" className="text-zinc-600 dark:text-zinc-400">
         {error.message || "Error inesperado en la aplicación."}
       </p>
       <button

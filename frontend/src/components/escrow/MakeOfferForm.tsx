@@ -54,9 +54,11 @@ export function MakeOfferForm({ onSubmit, disabled }: MakeOfferFormProps) {
     <form
       onSubmit={handleSubmit}
       aria-label="Crear oferta de escrow"
-      className="space-y-3 rounded-md border border-zinc-200 bg-white p-4"
+      className="space-y-3 rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
     >
-      <h2 className="text-lg font-semibold">Crear oferta</h2>
+      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        Crear oferta
+      </h2>
       <Field name="mintA" label="Mint A" placeholder="Pubkey mint A" />
       <Field name="mintB" label="Mint B" placeholder="Pubkey mint B" />
       <Field name="amountA" label="Amount A" placeholder="1000000" type="number" />
@@ -87,14 +89,16 @@ function Field({
 }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1 block text-zinc-700">{label}</span>
+      <span className="mb-1 block text-zinc-700 dark:text-zinc-300">
+        {label}
+      </span>
       <input
         name={name}
         aria-label={label}
         placeholder={placeholder}
         type={type}
         required
-        className="w-full rounded-md border border-zinc-300 px-3 py-2"
+        className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
       />
     </label>
   );

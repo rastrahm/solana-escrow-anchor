@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
 const SolanaProviderDynamic = dynamic(
   async () =>
@@ -14,10 +15,14 @@ export interface AppProvidersProps {
 }
 
 /**
- * @description Contenedor cliente de providers (Solana sin SSR).
+ * @description Contenedor cliente de providers (tema + Solana sin SSR).
  * @param children - Contenido de la app bajo providers.
- * @returns Árbol con SolanaProvider cargado solo en cliente.
+ * @returns Árbol con ThemeProvider y SolanaProvider.
  */
 export function AppProviders({ children }: AppProvidersProps) {
-  return <SolanaProviderDynamic>{children}</SolanaProviderDynamic>;
+  return (
+    <ThemeProvider>
+      <SolanaProviderDynamic>{children}</SolanaProviderDynamic>
+    </ThemeProvider>
+  );
 }

@@ -21,7 +21,7 @@ export function WalletStatus() {
     <p
       role="status"
       aria-label="Estado de la wallet"
-      className="text-sm text-zinc-600"
+      className="text-sm text-zinc-600 dark:text-zinc-400"
     >
       {label}
     </p>

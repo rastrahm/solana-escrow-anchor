@@ -8,12 +8,12 @@ export default function NotFoundPage() {
   return (
     <main className="mx-auto flex min-h-[50vh] max-w-xl flex-col justify-center gap-4 px-6">
       <h1 className="text-2xl font-semibold">Página no encontrada</h1>
-      <p className="text-zinc-600">
+      <p className="text-zinc-600 dark:text-zinc-400">
         La ruta solicitada no existe en Solana Escrow.
       </p>
       <Link
         href="/"
-        className="w-fit text-sm font-medium text-teal-800 underline"
+        className="w-fit text-sm font-medium text-teal-800 underline dark:text-teal-300"
       >
         Volver al inicio
       </Link>

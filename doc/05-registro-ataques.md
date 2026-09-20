@@ -79,8 +79,10 @@ Leyenda: ✅ mitigado · 🟡 aceptado/documentado · ⬜ N/A · ❌ abierto
 ### Build / deploy
 - [x] `declare_id!` = keypair
 - [x] `npm run harden:check` + `npm run test:harden`
-- [ ] Deploy verifiable (opcional)
-- [ ] IDL sincronizado con frontend (Fase 6+)
+- [x] Deploy a **devnet** (`2nak96ykerNBL3DkTcWoUKPgiENtLBS8ij9LhyPGXrAS`)
+- [ ] Deploy verifiable (opcional / mainnet)
+- [x] IDL sincronizado con `frontend/src/lib/idl/escrow.json`
+- [x] `Anchor.toml` `[programs.devnet]` + `.env.example` / `.env.local`
 
 ---
 
