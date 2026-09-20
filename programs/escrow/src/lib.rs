@@ -16,9 +16,19 @@ declare_id!("2nak96ykerNBL3DkTcWoUKPgiENtLBS8ij9LhyPGXrAS");
 pub mod escrow {
     use super::*;
 
-    /// Placeholder de scaffold; se reemplaza en Fase 2 por `make_offer`.
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+    /// @notice Crea una oferta de escrow y deposita Token A en el vault PDA.
+    /// @dev Ver `instructions::make_offer` para cuentas y validaciones.
+    /// @param seed Seed u64 de la PDA (`["escrow", maker, seed]`).
+    /// @param receive Cantidad de Token B esperada del taker.
+    /// @param amount Cantidad de Token A a bloquear en el vault.
+    /// @return Result<()> Ok si la oferta quedó activa.
+    pub fn make_offer(
+        ctx: Context<MakeOffer>,
+        seed: u64,
+        receive: u64,
+        amount: u64,
+    ) -> Result<()> {
+        instructions::make_offer::make_offer(ctx, seed, receive, amount)
     }
 }
 
@@ -66,12 +76,10 @@ mod layout_tests {
         assert_eq!(EscrowState::OFF_BUMP, EscrowState::OFF_SEED + 8);
         assert_eq!(EscrowState::OFF_BUMP + 1, EscrowState::SPACE);
 
-        // Sin huecos: cada offset = suma exacta de tamaños previos.
         let packed = 8 + 32 + 32 + 32 + 8 + 8 + 1;
         assert_eq!(packed, EscrowState::SPACE);
     }
 
-    /// Si alguien inserta un campo chico entre Pubkeys, los offsets fallan.
     #[test]
     fn pubkeys_precede_u64s_precede_u8() {
         assert!(EscrowState::OFF_MAKER < EscrowState::OFF_MINT_A);
@@ -79,7 +87,6 @@ mod layout_tests {
         assert!(EscrowState::OFF_MINT_B < EscrowState::OFF_RECEIVE);
         assert!(EscrowState::OFF_RECEIVE < EscrowState::OFF_SEED);
         assert!(EscrowState::OFF_SEED < EscrowState::OFF_BUMP);
-        // Último byte útil de la cuenta
         assert_eq!(EscrowState::OFF_BUMP, EscrowState::SPACE - 1);
     }
 }
