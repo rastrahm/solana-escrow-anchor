@@ -12,7 +12,7 @@ Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests
 | 3 | TakeOffer (swap atómico) | ✅ Completada |
 | 4 | Refund | ✅ Completada |
 | 5 | Hardening on-chain | ✅ Completada |
-| 6 | Frontend: base Next.js | ⬜ Pendiente |
+| 6 | Frontend: base Next.js | ✅ Completada |
 | 7 | Frontend: features (TDD UI) | ⬜ Pendiente |
 | 8 | Integración y despliegue | ⬜ Pendiente |
 
@@ -128,16 +128,21 @@ npm run test:harden
 
 ---
 
-## Fase 6 — Frontend: base Next.js
+## Fase 6 — Frontend: base Next.js ✅
 
-1. Estructura App Router: `layout`, `page`, `error.tsx`, `not-found.tsx`.
-2. Dependencias: `@solana/wallet-adapter-*`, `@coral-xyz/anchor`, Zod.
-3. Provider de wallet + conexión a cluster (devnet/localnet).
-4. Tipado estricto: cero `any`; interfaces exportadas.
-5. Declarar `'use client'` / `'use server'` de forma explícita.
-6. Configurar Vitest + React Testing Library.
+> **Estado: completada.**
 
-**Criterio de salida:** app muestra estado de wallet conectada/desconectada.
+- [x] App Router: `layout`, `page`, `error.tsx`, `not-found.tsx`.
+- [x] Deps: wallet-adapter, Anchor, Zod, Vitest + RTL.
+- [x] `SolanaProvider` + cluster validado con Zod (`devnet`/`localnet`).
+- [x] Tipado estricto + `'use client'` / server components explícitos.
+- [x] `WalletStatus` (TDD) muestra conectada/desconectada.
+- [x] Criterio: `npm --prefix frontend test` (6) + `npm run build:frontend`.
+
+```bash
+npm run dev:frontend
+npm --prefix frontend test
+```
 
 ---
 
