@@ -1,8 +1,10 @@
-# Diagrama de clases / estructura
+# Class diagram / structure
 
-Modelo de cuentas on-chain, módulos del programa y capas del frontend. En Solana no hay OOP clásica: las “clases” representan cuentas, contextos e interfaces TypeScript.
+🇪🇸 [Versión en español](./03-diagrama-clases-ES.md) · [Index](./README.md)
 
-## 1. On-chain (programa Anchor)
+On-chain account model, program modules and frontend layers. Solana has no classic OOP: the "classes" here represent accounts, contexts and TypeScript interfaces.
+
+## 1. On-chain (Anchor program)
 
 ```mermaid
 classDiagram
@@ -72,15 +74,15 @@ classDiagram
     MakeOffer --> EscrowState : init
     TakeOffer --> EscrowState : close to maker
     Refund --> EscrowState : close to maker
-    EscrowState --> EscrowError : puede lanzar
+    EscrowState --> EscrowError : may throw
     MakeOffer ..> EscrowError
     TakeOffer ..> EscrowError
     Refund ..> EscrowError
 ```
 
-### Layout de `EscrowState` (orden por tamaño)
+### `EscrowState` layout (ordered by size)
 
-| Campo | Tipo | Bytes |
+| Field | Type | Bytes |
 |-------|------|-------|
 | discriminator | — | 8 |
 | maker | Pubkey | 32 |
@@ -89,9 +91,9 @@ classDiagram
 | receive | u64 | 8 |
 | seed | u64 | 8 |
 | bump | u8 | 1 |
-| **Total aprox.** | | **~121** |
+| **Approx. total** | | **~121** |
 
-Objetivo: mantener el estado **bajo 128 bytes** para minimizar rent.
+Goal: keep the state **under 128 bytes** to minimize rent.
 
 ---
 
@@ -103,7 +105,7 @@ classDiagram
 
     class WalletProvider {
         +children
-        +conecta cluster y wallets
+        +connects cluster and wallets
     }
 
     class EscrowProgramClient {
@@ -125,7 +127,7 @@ classDiagram
 
     class MakeOfferForm {
         +onSubmit()
-        +valida con Zod
+        +validates with Zod
     }
 
     class EscrowList {
@@ -145,12 +147,12 @@ classDiagram
 
     class TakeOfferButton {
         +escrow: EscrowView
-        +ejecuta take_offer
+        +runs take_offer
     }
 
     class RefundButton {
         +escrow: EscrowView
-        +solo si wallet == maker
+        +only if wallet == maker
     }
 
     class useEscrow {
@@ -163,7 +165,7 @@ classDiagram
         +refund()
     }
 
-    WalletProvider --> EscrowProgramClient : inyecta connection/wallet
+    WalletProvider --> EscrowProgramClient : injects connection/wallet
     useEscrow --> EscrowProgramClient
     MakeOfferForm --> MakeOfferSchema
     MakeOfferForm --> useEscrow
@@ -172,12 +174,12 @@ classDiagram
     EscrowList --> RefundButton
     TakeOfferButton --> useEscrow
     RefundButton --> useEscrow
-    EscrowProgramClient --> EscrowView : deserializa cuentas
+    EscrowProgramClient --> EscrowView : deserializes accounts
 ```
 
 ---
 
-## 3. Relación vault ↔ PDA
+## 3. Vault ↔ PDA relationship
 
 ```mermaid
 classDiagram
@@ -197,4 +199,4 @@ classDiagram
     EscrowStatePDA <|-- VaultTokenAccount : authority
 ```
 
-La authority del vault **nunca** es el maker ni el taker: solo el PDA puede firmar retiros vía `signer_seeds`.
+The vault authority is **never** the maker or the taker: only the PDA can sign withdrawals via `signer_seeds`.
