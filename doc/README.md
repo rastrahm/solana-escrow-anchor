@@ -1,27 +1,15 @@
-# Documentación — Solana Escrow Anchor
+# Documentation / Documentación — Solana Escrow Anchor
 
-Documentación de planificación y diseño para un escrow atómico de tokens SPL (legacy + Token-2022) con programa Anchor y frontend Next.js (App Router).
+[← Project index / Índice del proyecto](../README.md)
 
-## Contenido
+| | English | Español |
+|--|---------|---------|
+| **Overview** | [README-EN.md](./README-EN.md) | [README-ES.md](./README-ES.md) |
+| 01 | [Step-by-step planning](./01-planificacion-EN.md) | [Planificación paso a paso](./01-planificacion-ES.md) |
+| 02 | [System flow diagram](./02-diagrama-flujo-EN.md) | [Diagrama de flujo](./02-diagrama-flujo-ES.md) |
+| 03 | [Class diagram](./03-diagrama-clases-EN.md) | [Diagrama de clases](./03-diagrama-clases-ES.md) |
+| 04 | [Process flowchart](./04-flujograma-EN.md) | [Flujograma](./04-flujograma-ES.md) |
+| 05 | [Attack registry](./05-registro-ataques-EN.md) | [Registro de ataques](./05-registro-ataques-ES.md) |
+| 06 | [On-chain optimization](./06-optimizacion-EN.md) | [Optimización on-chain](./06-optimizacion-ES.md) |
 
-| Archivo | Descripción |
-|---------|-------------|
-| [01-planificacion.md](./01-planificacion.md) | Plan paso a paso (on-chain + frontend + tests) |
-| [02-diagrama-flujo.md](./02-diagrama-flujo.md) | Diagrama de flujo del sistema y decisiones |
-| [03-diagrama-clases.md](./03-diagrama-clases.md) | Diagrama de clases / estructura de cuentas y módulos |
-| [04-flujograma.md](./04-flujograma.md) | Flujograma de instrucciones on-chain y UX |
-| [05-registro-ataques.md](./05-registro-ataques.md) | Checklist Sealevel / seguridad pre-despliegue |
-| [06-optimizacion.md](./06-optimizacion.md) | CU / rent / cuentas: análisis y cambios aplicados |
-
-## Stack objetivo
-
-- **On-chain:** Rust 1.75+, Anchor 0.30+, `anchor_spl::token_interface`
-- **Tests programa:** TypeScript (`anchor test`) con TDD
-- **Frontend:** Next.js App Router, Zod, Vitest + RTL, wallet adapter
-- **Tokens:** SPL Token y Token-2022 vía `TokenInterface`
-
-## Instrucciones del programa
-
-1. **MakeOffer** — Maker deposita Token A en vault PDA
-2. **TakeOffer** — Taker intercambia Token B por Token A (swap atómico)
-3. **Refund** — Maker cancela y recupera Token A + rent
+Screenshots / Capturas: [`img/`](./img/)

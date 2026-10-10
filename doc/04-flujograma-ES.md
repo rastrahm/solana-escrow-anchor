@@ -1,5 +1,7 @@
 # Flujograma de procesos
 
+🇬🇧 [English version](./04-flujograma-EN.md) · [Índice](./README.md)
+
 Secuencias temporales (pasos ordenados) para cada instrucción y para el usuario en la dApp.
 
 ## 1. MakeOffer — secuencia on-chain

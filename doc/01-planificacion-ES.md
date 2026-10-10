@@ -1,5 +1,7 @@
 # Planificación paso a paso — Escrow SPL + Frontend
 
+🇬🇧 [English version](./01-planificacion-EN.md) · [Índice](./README.md)
+
 Guía ordenada para construir el proyecto desde cero. Cada fase asume TDD: tests primero, implementación después.
 
 ## Progreso
@@ -113,7 +115,7 @@ npm run test:program
 
 > **Estado: completada.**
 
-- [x] Revisar ownership, signers, account substitution ([05-registro-ataques.md](./05-registro-ataques.md)).
+- [x] Revisar ownership, signers, account substitution ([05-registro-ataques-ES.md](./05-registro-ataques-ES.md)).
 - [x] Confirmar solo `transfer_checked` (`npm run harden:check`).
 - [x] Medir compute units (MakeOffer < 100k vía simulación).
 - [x] Benchmark layout: 121 bytes Borsh packed, little-endian, `Pubkey`→`u64`→`u8`.
@@ -173,7 +175,7 @@ Flujo manual localnet (Fase 8 formaliza deploy): conectar wallet → crear ofert
 - [x] Desplegar programa a **devnet** (`2nak96ykerNBL3DkTcWoUKPgiENtLBS8ij9LhyPGXrAS`).
 - [x] Actualizar IDL e ID: `Anchor.toml` `[programs.devnet]`, `frontend/src/lib/idl/`.
 - [x] Variables de entorno (`.env.example` / `.env.local`; secretos no en git).
-- [x] Checklist de seguridad ([05-registro-ataques.md](./05-registro-ataques.md) + `solana.cursorrules` + `.cursorrules`).
+- [x] Checklist de seguridad ([05-registro-ataques-ES.md](./05-registro-ataques-ES.md) + `solana.cursorrules` + `.cursorrules`).
 - [x] README de usuario en la raíz: build, test y UI.
 - [x] Criterio de salida: programa vivo en devnet + frontend apuntando al mismo Program ID.
 

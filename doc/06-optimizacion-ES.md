@@ -1,5 +1,7 @@
 # Optimización on-chain — CU, rent y tamaño de tx
 
+🇬🇧 [English version](./06-optimizacion-EN.md) · [Índice](./README.md)
+
 Análisis de si el escrow puede ser más rápido/barato **sin debilitar seguridad**.
 
 ## Costes en Solana (qué optimizar)

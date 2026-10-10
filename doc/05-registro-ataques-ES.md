@@ -1,5 +1,7 @@
 # Registro de ataques Solana — checklist pre-despliegue
 
+🇬🇧 [English version](./05-registro-ataques-EN.md) · [Índice](./README.md)
+
 Sí existen bibliotecas de ataques para Solana (el análogo de lo que en Ethereum suele verse vía SWC/Damn Vulnerable DeFi/Slither patterns). Lo que **no** había en este repo era un registro **aplicado a este escrow**. Este documento lo cubre.
 
 ## Fuentes canónicas del ecosistema (equivalente “biblioteca”)

@@ -1,5 +1,7 @@
 # Diagrama de flujo del sistema
 
+🇬🇧 [English version](./02-diagrama-flujo-EN.md) · [Índice](./README.md)
+
 Vista de alto nivel: decisiones y caminos del escrow (on-chain + frontend).
 
 ## 1. Flujo general del producto
